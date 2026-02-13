@@ -1,87 +1,118 @@
-// モンスト ランク上げ記録 - app.js
+// モンスト EXPカレンダー - app.js
 (() => {
-  const STORAGE_KEY = "monst_xp_daily_v1";
+  const STORAGE_KEY = "monst_xp_daily_v2";
 
   /** @type {Record<string, number>} */
   let data = load();
 
-  let viewDate = new Date(); // 現在表示中の月
-  let selected = toYMD(new Date()); // 選択日
+  // UI state
+  let viewDate = new Date();         // 表示月
+  let selected = toYMD(new Date());  // 選択日
+  let hideOutMonth = false;          // 画像左上の「非表示」っぽい挙動
 
   // Elements
   const monthLabel = document.getElementById("monthLabel");
   const calendarGrid = document.getElementById("calendarGrid");
+  const monthTotalEl = document.getElementById("monthTotal");
+
+  const muteBtn = document.getElementById("muteBtn");
+  const menuBtn = document.getElementById("menuBtn");
+  const fab = document.getElementById("fab");
+
+  const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const xpInput = document.getElementById("xpInput");
-  const monthTotalEl = document.getElementById("monthTotal");
-  const weekTotalEl = document.getElementById("weekTotal");
-  const monthListEl = document.getElementById("monthList");
+  const saveBtn = document.getElementById("saveBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
 
+  const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
   const nextBtn = document.getElementById("nextBtn");
   const todayBtn = document.getElementById("todayBtn");
-  const saveBtn = document.getElementById("saveBtn");
-  const clearBtn = document.getElementById("clearBtn");
   const exportBtn = document.getElementById("exportBtn");
   const importInput = document.getElementById("importInput");
+  const wipeBtn = document.getElementById("wipeBtn");
+
   const toast = document.getElementById("toast");
 
   // Init
+  // 月初に固定して表示が安定
+  const now = new Date();
+  viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   render();
 
   // Events
-  prevBtn.addEventListener("click", () => { viewDate = addMonths(viewDate, -1); render(); });
-  nextBtn.addEventListener("click", () => { viewDate = addMonths(viewDate, 1); render(); });
+  muteBtn.addEventListener("click", () => {
+    hideOutMonth = !hideOutMonth;
+    muteBtn.querySelector(".icon").textContent = hideOutMonth ? "🔔" : "🔕";
+    render();
+  });
+
+  menuBtn.addEventListener("click", () => menuDialog.showModal());
+
+  prevBtn.addEventListener("click", () => {
+    viewDate = addMonths(viewDate, -1);
+    render();
+  });
+  nextBtn.addEventListener("click", () => {
+    viewDate = addMonths(viewDate, 1);
+    render();
+  });
   todayBtn.addEventListener("click", () => {
-    const now = new Date();
-    viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    select(toYMD(now));
+    const t = new Date();
+    viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
+    selected = toYMD(t);
+    render();
+    menuDialog.close();
+  });
+
+  fab.addEventListener("click", () => {
+    // 今日をすぐ入力
+    const t = new Date();
+    selected = toYMD(t);
+    // 今月以外表示中なら今月へ
+    viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
+    openEntry();
     render();
   });
 
   saveBtn.addEventListener("click", () => {
-    const ymd = selected;
     const n = normalizeNumber(xpInput.value);
-
     if (n === null) {
-      showToast("数字だけ入れてね（例: 250000）");
+      showToast("数字だけ（例: 250000）");
       return;
     }
-
     if (n === 0) {
-      delete data[ymd];
+      delete data[selected];
       persist();
       showToast("削除しました");
+      entryDialog.close();
       render();
       return;
     }
-
-    data[ymd] = n;
+    data[selected] = n;
     persist();
     showToast("保存しました");
+    entryDialog.close();
     render();
   });
 
-  clearBtn.addEventListener("click", () => {
-    const ymd = selected;
-    if (data[ymd] == null) {
+  deleteBtn.addEventListener("click", () => {
+    if (data[selected] == null) {
       showToast("この日は記録なし");
       return;
     }
-    delete data[ymd];
+    delete data[selected];
     persist();
     showToast("削除しました");
+    entryDialog.close();
     render();
-  });
-
-  xpInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") saveBtn.click();
   });
 
   exportBtn.addEventListener("click", () => {
     const payload = {
-      app: "monst-rank-tracker",
-      version: 1,
+      app: "monst-exp-calendar",
+      version: 2,
       exportedAt: new Date().toISOString(),
       data
     };
@@ -95,44 +126,49 @@
     a.remove();
     URL.revokeObjectURL(url);
     showToast("エクスポートしました");
+    menuDialog.close();
   });
 
   importInput.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const text = await file.text();
       const json = JSON.parse(text);
-
       const imported = (json && json.data && typeof json.data === "object") ? json.data : null;
       if (!imported) throw new Error("invalid");
 
-      // 数値以外は除外
       const cleaned = {};
       for (const [k, v] of Object.entries(imported)) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
         const num = typeof v === "number" ? v : normalizeNumber(String(v));
         if (num && num > 0) cleaned[k] = num;
       }
-
       data = { ...data, ...cleaned };
       persist();
       showToast("インポートしました");
+      menuDialog.close();
       render();
     } catch {
-      showToast("インポート失敗（JSON形式を確認）");
+      showToast("インポート失敗（JSON確認）");
     } finally {
       importInput.value = "";
     }
   });
 
-  // Rendering
+  wipeBtn.addEventListener("click", () => {
+    // 迷う余地がないように即削除（必要なら後で確認ダイアログにする）
+    data = {};
+    persist();
+    showToast("全データ削除");
+    menuDialog.close();
+    render();
+  });
+
+  // Calendar render
   function render() {
-    // header label
     monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
 
-    // calendar
     calendarGrid.innerHTML = "";
     const cells = buildCalendarCells(viewDate);
     const todayYMD = toYMD(new Date());
@@ -140,128 +176,73 @@
     for (const c of cells) {
       const cell = document.createElement("div");
       cell.className = "day";
+
       if (c.out) cell.classList.add("out");
       if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.ymd === selected) cell.classList.add("selected");
 
-      const date = document.createElement("div");
-      date.className = "date";
-      date.textContent = String(c.day);
-
-      cell.appendChild(date);
-
-      if (c.ymd === todayYMD) {
-        const b = document.createElement("div");
-        b.className = "badge";
-        b.textContent = "今日";
-        cell.appendChild(b);
+      // hide out-of-month like screenshot's "mute" behavior
+      if (hideOutMonth && c.out) {
+        cell.style.visibility = "hidden";
+        cell.style.pointerEvents = "none";
       }
+
+      const dn = document.createElement("div");
+      dn.className = "dnum";
+      dn.textContent = String(c.day);
+      cell.appendChild(dn);
 
       const v = data[c.ymd];
       if (v != null) {
-        const xp = document.createElement("div");
-        xp.className = "xp";
-        xp.innerHTML = `<span class="plus">+</span><span class="num">${formatInt(v)}</span>`;
-        cell.appendChild(xp);
-
-        const small = document.createElement("div");
-        small.className = "small";
-        small.textContent = "獲得EXP";
-        cell.appendChild(small);
+        const exp = document.createElement("div");
+        exp.className = "exp";
+        exp.textContent = formatInt(v);
+        cell.appendChild(exp);
+      } else {
+        // 空でも高さを揃える（画像っぽく）
+        const exp = document.createElement("div");
+        exp.className = "exp";
+        exp.style.visibility = "hidden";
+        exp.textContent = "0";
+        cell.appendChild(exp);
       }
 
       cell.addEventListener("click", () => {
-        select(c.ymd);
-        // 表示中の月外を押したらその月へ移動
+        selected = c.ymd;
+        // 月外を押したらその月に移動
         if (c.out) {
           const [yy, mm] = c.ymd.split("-").map(Number);
           viewDate = new Date(yy, mm - 1, 1);
         }
+        openEntry();
         render();
       });
 
       calendarGrid.appendChild(cell);
     }
 
-    // sidebar
+    monthTotalEl.textContent = formatInt(sumMonth(viewDate));
+  }
+
+  function openEntry() {
     selectedDateEl.textContent = selected;
     xpInput.value = data[selected] != null ? String(data[selected]) : "";
-    xpInput.placeholder = data[selected] != null ? "" : "例: 250000";
-
-    // stats
-    monthTotalEl.textContent = formatInt(sumMonth(viewDate));
-    weekTotalEl.textContent = formatInt(sumLastDays(7));
-
-    // month list
-    renderMonthList();
+    // iOS: showModal前にfocusすると事故ることがあるので、開いてから
+    entryDialog.showModal();
+    setTimeout(() => xpInput.focus(), 50);
   }
 
-  function renderMonthList() {
-    const ym = `${viewDate.getFullYear()}-${pad2(viewDate.getMonth() + 1)}`;
-    const rows = Object.entries(data)
-      .filter(([k, v]) => k.startsWith(ym) && typeof v === "number")
-      .sort(([a], [b]) => a.localeCompare(b));
-
-    monthListEl.innerHTML = "";
-
-    if (rows.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "muted";
-      empty.textContent = "今月の記録はまだありません。";
-      monthListEl.appendChild(empty);
-      return;
-    }
-
-    for (const [k, v] of rows) {
-      const row = document.createElement("div");
-      row.className = "row";
-
-      const left = document.createElement("div");
-      left.innerHTML = `<div class="d">${k}</div><div class="muted">獲得EXP</div>`;
-
-      const right = document.createElement("div");
-      right.style.display = "flex";
-      right.style.alignItems = "center";
-      right.style.gap = "10px";
-
-      const val = document.createElement("div");
-      val.className = "v";
-      val.innerHTML = `<span class="plus">+</span>${formatInt(v)}`;
-
-      const btn = document.createElement("button");
-      btn.textContent = "編集";
-      btn.addEventListener("click", () => {
-        select(k);
-        render();
-        xpInput.focus();
-      });
-
-      right.appendChild(val);
-      right.appendChild(btn);
-
-      row.appendChild(left);
-      row.appendChild(right);
-
-      monthListEl.appendChild(row);
-    }
-  }
-
-  function select(ymd) {
-    selected = ymd;
-  }
-
-  // Calendar generation
   function buildCalendarCells(d) {
     const year = d.getFullYear();
     const month = d.getMonth();
     const first = new Date(year, month, 1);
 
-    // 日曜始まり (0=Sun)
+    // 日曜始まり
     const startOffset = first.getDay();
     const start = new Date(year, month, 1 - startOffset);
 
     const cells = [];
-    for (let i = 0; i < 42; i++) { // 6週
+    for (let i = 0; i < 42; i++) {
       const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
       const ymd = toYMD(cur);
       cells.push({
@@ -273,7 +254,7 @@
     return cells;
   }
 
-  // Data
+  // Storage
   function persist() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
@@ -284,7 +265,6 @@
       if (!raw) return {};
       const obj = JSON.parse(raw);
       if (!obj || typeof obj !== "object") return {};
-      // sanitize
       const cleaned = {};
       for (const [k, v] of Object.entries(obj)) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
@@ -304,18 +284,6 @@
     let s = 0;
     for (const [k, v] of Object.entries(data)) {
       if (k.startsWith(prefix)) s += v;
-    }
-    return s;
-  }
-
-  function sumLastDays(days) {
-    const today = new Date();
-    let s = 0;
-    for (let i = 0; i < days; i++) {
-      const dt = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
-      const key = toYMD(dt);
-      const v = data[key];
-      if (v != null) s += v;
     }
     return s;
   }
