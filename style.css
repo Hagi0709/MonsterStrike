@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>モンスト ランク上げ記録</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">MS</div>
+      <div>
+        <h1>モンスト ランク上げ記録</h1>
+        <p class="sub">毎日の獲得経験値をカレンダーで管理（端末内に保存）</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="todayBtn" class="btn">今日</button>
+      <div class="month-nav">
+        <button id="prevBtn" class="icon-btn" aria-label="前の月">‹</button>
+        <div class="month-label" id="monthLabel">----</div>
+        <button id="nextBtn" class="icon-btn" aria-label="次の月">›</button>
+      </div>
+      <button id="exportBtn" class="btn btn-ghost">エクスポート</button>
+      <label class="btn btn-ghost file-btn">
+        インポート
+        <input id="importInput" type="file" accept="application/json" />
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="calendar-card">
+      <div class="calendar-top">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">今月合計</div>
+            <div class="stat-value" id="monthTotal">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">直近7日合計</div>
+            <div class="stat-value" id="weekTotal">0</div>
+          </div>
+        </div>
+        <div class="hint">日付をタップして入力。0なら削除。</div>
+      </div>
+
+      <div class="dow">
+        <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+      </div>
+
+      <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
+    </section>
+
+    <aside class="side-card">
+      <h2>入力</h2>
+      <div class="field">
+        <label>日付</label>
+        <div class="date-pill" id="selectedDate">----</div>
+      </div>
+
+      <div class="field">
+        <label for="xpInput">獲得経験値（増加量）</label>
+        <input id="xpInput" class="input" inputmode="numeric" placeholder="例: 250000" />
+        <div class="muted">※半角数字。0にするとその日の記録を削除。</div>
+      </div>
+
+      <div class="actions">
+        <button id="saveBtn" class="btn btn-primary">保存</button>
+        <button id="clearBtn" class="btn btn-danger">削除</button>
+      </div>
+
+      <hr class="sep" />
+
+      <h2>一覧（今月）</h2>
+      <div id="monthList" class="list"></div>
+
+      <div class="footer-note">
+        <div class="muted">保存先: この端末のブラウザ（localStorage）</div>
+      </div>
+    </aside>
+  </main>
+
+  <dialog id="toast" class="toast" aria-live="polite"></dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
