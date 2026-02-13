@@ -247,6 +247,7 @@
 
       if (c.out) cell.classList.add("out");
       if (c.ymd === todayYMD) cell.classList.add("today");
+      if (c.dow === 0) cell.classList.add("sun");
       if (c.ymd === selected) cell.classList.add("selected");
 
       const dn = document.createElement("div");
@@ -261,7 +262,7 @@
       if (typeof d === "number") {
         if (d < 0) exp.classList.add("neg");
         exp.textContent = formatSignedInt(d);
-        fitText(exp, 16, 10); // 自動縮小
+        fitText(exp, 16, 6); // 自動縮小
       } else {
         exp.style.visibility = "hidden";
         exp.textContent = "0";
@@ -355,7 +356,7 @@
     const cells = [];
     for (let i = 0; i < 42; i++) {
       const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      cells.push({ ymd: toYMD(cur), day: cur.getDate(), out: cur.getMonth() !== month });
+      cells.push({ ymd: toYMD(cur), day: cur.getDate(), out: cur.getMonth() !== month, dow: cur.getDay() });
     }
     return cells;
   }
@@ -408,22 +409,28 @@
 
   // ---- Fit text (shrink font; keep columns fixed) ----
   function fitText(el, basePx, minPx){
-    el.style.fontSize = basePx + "px";
-
-    const len = (el.textContent || "").length;
+    // まずベース適用
     let size = basePx;
-    if (len >= 10) size = basePx - 2;
-    if (len >= 12) size = basePx - 3;
-    if (len >= 14) size = basePx - 4;
+    el.style.fontSize = size + "px";
+
+    // 文字数で荒く落とす（高速）
+    const len = (el.textContent || "").length;
+    if (len >= 9)  size = Math.min(size, basePx - 2);
+    if (len >= 11) size = Math.min(size, basePx - 4);
+    if (len >= 13) size = Math.min(size, basePx - 6);
+    if (len >= 15) size = Math.min(size, basePx - 7);
     size = Math.max(minPx, size);
     el.style.fontSize = size + "px";
 
+    // 実測で「必ず収まるまで」落とす（列幅は固定のまま）
+    // 上限を少し大きめにして、+47,117,737,663 でも1行表示を狙う
     let guard = 0;
-    while (guard < 8 && el.scrollWidth > el.clientWidth && size > minPx){
+    while (guard < 28 && el.scrollWidth > el.clientWidth && size > minPx){
       size -= 1;
       el.style.fontSize = size + "px";
       guard++;
     }
+  }
   }
 
   // ---- Utils ----
