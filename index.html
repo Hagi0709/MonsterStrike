@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+  <!-- ズーム禁止 -->
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <title>モンスト EXPカレンダー</title>
   <link rel="stylesheet" href="style.css" />
@@ -26,7 +27,10 @@
       <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
     </div>
 
-    <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
+    <!-- スライドアニメ用の枠 -->
+    <div id="gridWrap" class="grid-wrap" aria-label="カレンダー">
+      <div id="calendarGrid" class="grid grid-current"></div>
+    </div>
   </main>
 
   <!-- bottom total pill -->
@@ -44,7 +48,7 @@
   <dialog id="entryDialog" class="dialog">
     <form method="dialog" class="dialog-card" id="entryForm">
       <div class="dialog-head">
-        <div class="dialog-title">記録</div>
+        <div class="dialog-title">累計経験値の入力</div>
         <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
       </div>
 
@@ -55,9 +59,14 @@
         </div>
 
         <div class="row">
-          <label class="label" for="xpInput">獲得経験値（増加量）</label>
-          <input id="xpInput" class="input" inputmode="numeric" placeholder="例: 250000" />
-          <div class="help">0で削除。数字のみ。</div>
+          <label class="label" for="cumInput">その日の時点での累計経験値</label>
+          <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
+          <div class="help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
+        </div>
+
+        <div class="row mini">
+          <div class="label">計算プレビュー</div>
+          <div id="preview" class="preview">—</div>
         </div>
       </div>
 
