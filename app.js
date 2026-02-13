@@ -1,18 +1,20 @@
-// モンスト EXPカレンダー - app.js
+// モンスト EXPカレンダー（累計入力→増加量表示）- app.js
 (() => {
-  const STORAGE_KEY = "monst_xp_daily_v2";
+  const STORAGE_KEY = "monst_cumxp_v2";
 
-  /** @type {Record<string, number>} */
-  let data = load();
+  /** @type {Record<string, number>} 累計経験値 */
+  let cum = load();
 
   // UI state
   let viewDate = new Date();         // 表示月
   let selected = toYMD(new Date());  // 選択日
-  let hideOutMonth = false;          // 画像左上の「非表示」っぽい挙動
+  let hideOutMonth = false;          // 月外セルを隠す
+  let animating = false;
 
   // Elements
   const monthLabel = document.getElementById("monthLabel");
-  const calendarGrid = document.getElementById("calendarGrid");
+  const gridWrap = document.getElementById("gridWrap");
+  let calendarGrid = document.getElementById("calendarGrid"); // current grid
   const monthTotalEl = document.getElementById("monthTotal");
 
   const muteBtn = document.getElementById("muteBtn");
@@ -21,7 +23,8 @@
 
   const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
-  const xpInput = document.getElementById("xpInput");
+  const cumInput = document.getElementById("cumInput");
+  const previewEl = document.getElementById("preview");
   const saveBtn = document.getElementById("saveBtn");
   const deleteBtn = document.getElementById("deleteBtn");
 
@@ -35,164 +38,113 @@
 
   const toast = document.getElementById("toast");
 
-  // --- UX helpers ---
-  // iOS/モバイル: ピンチ/ダブルタップズームを抑止（完全禁止はブラウザ仕様で限界あり）
+  // ズーム抑止（iOS）
   document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
   document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
   document.addEventListener("gestureend", (e) => e.preventDefault(), { passive: false });
   document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
 
-  // 横スワイプで月移動（カレンダー領域）
-  let touchX = null;
-  const swipeTarget = document.querySelector(".screen");
-  swipeTarget.addEventListener("touchstart", (e) => {
-    if (entryDialog.open || menuDialog.open) return;
-    touchX = e.changedTouches[0].clientX;
-  }, { passive: true });
-
-  swipeTarget.addEventListener("touchend", (e) => {
-    if (entryDialog.open || menuDialog.open) return;
-    if (touchX == null) return;
-    const dx = e.changedTouches[0].clientX - touchX;
-    touchX = null;
-
-    const threshold = 42;
-    if (Math.abs(dx) < threshold) return;
-
-    // 左スワイプで次の月、右スワイプで前の月
-    viewDate = addMonths(viewDate, dx < 0 ? 1 : -1);
-    render();
-  }, { passive: true });
-
-  // 入力中に , を付ける（カーソル位置もなるべく維持）
-  function formatNumberInput(inputEl){
-    const raw = inputEl.value;
-    const selStart = inputEl.selectionStart ?? raw.length;
-
-    // カーソルより左にある「数字の数」を数える（, は無視）
-    let digitsLeft = 0;
-    for (let i = 0; i < selStart; i++){
-      const ch = raw[i];
-      if (ch >= "0" && ch <= "9") digitsLeft++;
-    }
-
-    const digits = raw.replace(/[^0-9]/g, "");
-    const formatted = digits === "" ? "" : Number(digits).toLocaleString("ja-JP");
-    inputEl.value = formatted;
-
-    // 同じ「数字の数」の位置へカーソルを戻す
-    let pos = formatted.length;
-    if (digitsLeft === 0) pos = 0;
-    else {
-      let count = 0;
-      for (let i = 0; i < formatted.length; i++){
-        const ch = formatted[i];
-        if (ch >= "0" && ch <= "9") count++;
-        if (count >= digitsLeft){ pos = i + 1; break; }
-      }
-    }
-    try { inputEl.setSelectionRange(pos, pos); } catch {}
-  }
-
-  // 文字数に合わせてフォントを小さく（枠ズレ防止）
-  function autoFontSize(el, opts){
-    const text = (el.textContent || "").trim();
-    const len = text.length;
-    let size = opts.base;
-    for (const step of opts.steps){
-      if (len >= step.len) size = step.size;
-    }
-    size = Math.max(opts.min, Math.min(opts.base, size));
-    el.style.fontSize = size + "px";
-  }
-
-
   // Init
-  // 月初に固定して表示が安定
   const now = new Date();
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
-  render();
+  renderNoAnim();
+
+  // --- Swipe month change (with animation) ---
+  let touchX = null;
+  let touchY = null;
+
+  gridWrap.addEventListener("touchstart", (e) => {
+    if (entryDialog.open || menuDialog.open) return;
+    const t = e.changedTouches[0];
+    touchX = t.clientX;
+    touchY = t.clientY;
+  }, { passive: true });
+
+  gridWrap.addEventListener("touchend", (e) => {
+    if (entryDialog.open || menuDialog.open) return;
+    if (touchX == null || touchY == null) return;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchX;
+    const dy = t.clientY - touchY;
+    touchX = null; touchY = null;
+
+    // 縦スクロール誤爆を抑える
+    if (Math.abs(dx) < 42) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.7) return;
+
+    if (dx < 0) changeMonth(1);   // 左→次
+    else changeMonth(-1);         // 右→前
+  }, { passive: true });
 
   // Events
   muteBtn.addEventListener("click", () => {
     hideOutMonth = !hideOutMonth;
     muteBtn.querySelector(".icon").textContent = hideOutMonth ? "🔔" : "🔕";
-    render();
+    renderNoAnim();
   });
 
   menuBtn.addEventListener("click", () => menuDialog.showModal());
 
-  prevBtn.addEventListener("click", () => {
-    viewDate = addMonths(viewDate, -1);
-    render();
-  });
-  nextBtn.addEventListener("click", () => {
-    viewDate = addMonths(viewDate, 1);
-    render();
-  });
+  prevBtn.addEventListener("click", () => changeMonth(-1));
+  nextBtn.addEventListener("click", () => changeMonth(1));
+
   todayBtn.addEventListener("click", () => {
     const t = new Date();
     viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
     selected = toYMD(t);
-    render();
+    renderNoAnim();
     menuDialog.close();
   });
 
-  fab.addEventListener("click", () => {
-    // 今日をすぐ入力
-    const t = new Date();
-    selected = toYMD(t);
-    // 今月以外表示中なら今月へ
-    viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
-    openEntry();
-    render();
-  });
+  // 仕様：日付を選択 → 右下＋で入力
+  fab.addEventListener("click", () => openEntry(selected));
 
   saveBtn.addEventListener("click", () => {
-    const n = normalizeNumber(xpInput.value);
-    if (n === null) {
-      showToast("数字だけ（例: 250000）");
-      return;
-    }
+    const n = normalizeNumber(cumInput.value);
+    if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
     if (n === 0) {
-      delete data[selected];
+      delete cum[selected];
       persist();
       showToast("削除しました");
       entryDialog.close();
-      render();
+      renderNoAnim();
       return;
     }
-    data[selected] = n;
+    cum[selected] = n;
     persist();
     showToast("保存しました");
     entryDialog.close();
-    render();
+    renderNoAnim();
   });
 
   deleteBtn.addEventListener("click", () => {
-    if (data[selected] == null) {
-      showToast("この日は記録なし");
-      return;
-    }
-    delete data[selected];
+    if (cum[selected] == null) { showToast("この日は記録なし"); return; }
+    delete cum[selected];
     persist();
     showToast("削除しました");
     entryDialog.close();
-    render();
+    renderNoAnim();
+  });
+
+  // 入力しながら3桁カンマ
+  cumInput.addEventListener("input", () => {
+    formatNumberInput(cumInput);
+    updatePreview();
   });
 
   exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
-      version: 2,
+      version: 4,
       exportedAt: new Date().toISOString(),
-      data
+      cumulative: cum
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `monst_xp_${toYMD(new Date())}.json`;
+    a.download = `monst_cumxp_${toYMD(new Date())}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -207,7 +159,9 @@
     try {
       const text = await file.text();
       const json = JSON.parse(text);
-      const imported = (json && json.data && typeof json.data === "object") ? json.data : null;
+      const imported = (json && (json.cumulative || json.data) && typeof (json.cumulative || json.data) === "object")
+        ? (json.cumulative || json.data)
+        : null;
       if (!imported) throw new Error("invalid");
 
       const cleaned = {};
@@ -216,11 +170,11 @@
         const num = typeof v === "number" ? v : normalizeNumber(String(v));
         if (num && num > 0) cleaned[k] = num;
       }
-      data = { ...data, ...cleaned };
+      cum = { ...cum, ...cleaned };
       persist();
       showToast("インポートしました");
       menuDialog.close();
-      render();
+      renderNoAnim();
     } catch {
       showToast("インポート失敗（JSON確認）");
     } finally {
@@ -229,20 +183,71 @@
   });
 
   wipeBtn.addEventListener("click", () => {
-    // 迷う余地がないように即削除（必要なら後で確認ダイアログにする）
-    data = {};
+    cum = {};
     persist();
     showToast("全データ削除");
     menuDialog.close();
-    render();
+    renderNoAnim();
   });
 
-  // Calendar render
-  function render() {
+  // ---- Month change with slide animation ----
+  function changeMonth(delta) {
+    if (animating) return;
+    viewDate = addMonths(viewDate, delta);
+    renderAnimated(delta > 0 ? "next" : "prev");
+  }
+
+  function renderAnimated(dir) {
+    animating = true;
+
     monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
 
+    const deltaMap = buildDeltaMap(cum);
+    const newGrid = document.createElement("div");
+    newGrid.className = "grid grid-anim " + (dir === "next" ? "grid-enter-right" : "grid-enter-left");
+    fillGrid(newGrid, viewDate, deltaMap);
+
+    // old grid animate out
+    calendarGrid.classList.add("grid-anim");
+    calendarGrid.classList.remove("grid-current");
+    calendarGrid.classList.add(dir === "next" ? "grid-exit-left" : "grid-exit-right");
+
+    gridWrap.appendChild(newGrid);
+
+    requestAnimationFrame(() => {
+      newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
+      newGrid.classList.add("grid-current");
+    });
+
+    const cleanup = () => {
+      try { calendarGrid.remove(); } catch {}
+      calendarGrid = newGrid;
+      animating = false;
+    };
+
+    // newGridのtransitionで確実に拾う
+    newGrid.addEventListener("transitionend", cleanup, { once: true });
+
+    // 合計更新
+    monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+    fitText(monthTotalEl, 22, 14);
+  }
+
+  function renderNoAnim() {
+    monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
+
+    const deltaMap = buildDeltaMap(cum);
+    calendarGrid.className = "grid grid-current";
     calendarGrid.innerHTML = "";
-    const cells = buildCalendarCells(viewDate);
+    fillGrid(calendarGrid, viewDate, deltaMap);
+
+    monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+    fitText(monthTotalEl, 22, 14);
+  }
+
+  // ---- Grid fill ----
+  function fillGrid(targetGrid, monthDate, deltaMap) {
+    const cells = buildCalendarCells(monthDate);
     const todayYMD = toYMD(new Date());
 
     for (const c of cells) {
@@ -253,7 +258,6 @@
       if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.ymd === selected) cell.classList.add("selected");
 
-      // hide out-of-month like screenshot's "mute" behavior
       if (hideOutMonth && c.out) {
         cell.style.visibility = "hidden";
         cell.style.pointerEvents = "none";
@@ -264,72 +268,114 @@
       dn.textContent = String(c.day);
       cell.appendChild(dn);
 
-      const v = data[c.ymd];
-      if (v != null) {
-        const exp = document.createElement("div");
-        exp.className = "exp";
-        exp.textContent = formatInt(v);
-        cell.appendChild(exp);
+      const d = deltaMap[c.ymd];
+      const exp = document.createElement("div");
+      exp.className = "exp";
+
+      if (typeof d === "number") {
+        if (d < 0) exp.classList.add("neg");
+        exp.textContent = formatSignedInt(d);
+        fitText(exp, 16, 10); // 自動縮小
       } else {
-        // 空でも高さを揃える（画像っぽく）
-        const exp = document.createElement("div");
-        exp.className = "exp";
         exp.style.visibility = "hidden";
         exp.textContent = "0";
-        cell.appendChild(exp);
       }
+      cell.appendChild(exp);
 
       cell.addEventListener("click", () => {
         selected = c.ymd;
-        // 月外を押したらその月に移動
-        if (c.out) {
-          const [yy, mm] = c.ymd.split("-").map(Number);
-          viewDate = new Date(yy, mm - 1, 1);
-        }
-        openEntry();
-        render();
+        renderNoAnim();
       });
 
-      calendarGrid.appendChild(cell);
+      targetGrid.appendChild(cell);
     }
-
-    monthTotalEl.textContent = formatInt(sumMonth(viewDate));
   }
 
-  function openEntry() {
+  // ---- Entry ----
+  function openEntry(ymd) {
+    selected = ymd;
     selectedDateEl.textContent = selected;
-    xpInput.value = data[selected] != null ? String(data[selected]) : "";
-    // iOS: showModal前にfocusすると事故ることがあるので、開いてから
+    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
+    updatePreview();
     entryDialog.showModal();
-    setTimeout(() => xpInput.focus(), 50);
+    setTimeout(() => cumInput.focus(), 60);
   }
 
+  function updatePreview() {
+    const n = normalizeNumber(cumInput.value);
+    if (n === null) { previewEl.textContent = "—"; return; }
+    if (n === 0) { previewEl.textContent = "削除"; return; }
+
+    const prev = findPrevCumulative(selected, cum);
+    if (!prev) { previewEl.textContent = "前回記録なし（増加量は表示されません）"; return; }
+
+    const diff = n - prev.value;
+    const sign = diff >= 0 ? "+" : "−";
+    const cls = diff >= 0 ? "plus" : "neg";
+    previewEl.innerHTML = `前回(${prev.date})との差：<span class="${cls}">${sign}${formatInt(Math.abs(diff))}</span>`;
+  }
+
+  // ---- Data to delta ----
+  function buildDeltaMap(cumulative) {
+    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    keys.sort();
+
+    const delta = {};
+    let prevKey = null;
+    for (const k of keys) {
+      const v = cumulative[k];
+      if (typeof v !== "number") continue;
+      if (prevKey != null) {
+        const pv = cumulative[prevKey];
+        if (typeof pv === "number") delta[k] = v - pv;
+      }
+      prevKey = k;
+    }
+    return delta;
+  }
+
+  function findPrevCumulative(dateKey, cumulative) {
+    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    keys.sort();
+    let prev = null;
+    for (const k of keys) {
+      if (k < dateKey) prev = k;
+      if (k >= dateKey) break;
+    }
+    if (!prev) return null;
+    return { date: prev, value: cumulative[prev] };
+  }
+
+  function sumMonthDelta(d, deltaMap) {
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const prefix = `${y}-${pad2(m)}`;
+    let s = 0;
+    for (const [k, v] of Object.entries(deltaMap)) {
+      if (k.startsWith(prefix) && typeof v === "number") s += v;
+    }
+    return s;
+  }
+
+  // ---- Calendar cells ----
   function buildCalendarCells(d) {
     const year = d.getFullYear();
     const month = d.getMonth();
     const first = new Date(year, month, 1);
 
-    // 日曜始まり
-    const startOffset = first.getDay();
+    const startOffset = first.getDay(); // Sunday=0
     const start = new Date(year, month, 1 - startOffset);
 
     const cells = [];
     for (let i = 0; i < 42; i++) {
       const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      const ymd = toYMD(cur);
-      cells.push({
-        ymd,
-        day: cur.getDate(),
-        out: cur.getMonth() !== month
-      });
+      cells.push({ ymd: toYMD(cur), day: cur.getDate(), out: cur.getMonth() !== month });
     }
     return cells;
   }
 
-  // Storage
-  function persist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
+  // ---- Storage ----
+  function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(cum)); }
 
   function load() {
     try {
@@ -343,24 +389,58 @@
         if (typeof v === "number" && Number.isFinite(v) && v > 0) cleaned[k] = Math.floor(v);
       }
       return cleaned;
-    } catch {
-      return {};
+    } catch { return {}; }
+  }
+
+  // ---- Input comma formatting ----
+  function formatNumberInput(inputEl){
+    const raw = inputEl.value;
+    const selStart = inputEl.selectionStart ?? raw.length;
+
+    let digitsLeft = 0;
+    for (let i = 0; i < selStart; i++){
+      const ch = raw[i];
+      if (ch >= "0" && ch <= "9") digitsLeft++;
+    }
+
+    const digits = raw.replace(/[^0-9]/g, "");
+    const formatted = digits === "" ? "" : Number(digits).toLocaleString("ja-JP");
+    inputEl.value = formatted;
+
+    let pos = formatted.length;
+    if (digitsLeft === 0) pos = 0;
+    else {
+      let count = 0;
+      for (let i = 0; i < formatted.length; i++){
+        const ch = formatted[i];
+        if (ch >= "0" && ch <= "9") count++;
+        if (count >= digitsLeft){ pos = i + 1; break; }
+      }
+    }
+    try { inputEl.setSelectionRange(pos, pos); } catch {}
+  }
+
+  // ---- Fit text to avoid cell shifting ----
+  function fitText(el, basePx, minPx){
+    el.style.fontSize = basePx + "px";
+
+    const len = (el.textContent || "").length;
+    let size = basePx;
+    if (len >= 10) size = basePx - 2;
+    if (len >= 12) size = basePx - 3;
+    if (len >= 14) size = basePx - 4;
+    size = Math.max(minPx, size);
+    el.style.fontSize = size + "px";
+
+    let guard = 0;
+    while (guard < 8 && el.scrollWidth > el.clientWidth && size > minPx){
+      size -= 1;
+      el.style.fontSize = size + "px";
+      guard++;
     }
   }
 
-  // Stats
-  function sumMonth(d) {
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const prefix = `${y}-${pad2(m)}`;
-    let s = 0;
-    for (const [k, v] of Object.entries(data)) {
-      if (k.startsWith(prefix)) s += v;
-    }
-    return s;
-  }
-
-  // Utils
+  // ---- Utils ----
   function toYMD(date) {
     const y = date.getFullYear();
     const m = pad2(date.getMonth() + 1);
@@ -386,16 +466,16 @@
     return Math.max(0, Math.floor(n));
   }
 
-  function formatInt(n) {
-    return Number(n).toLocaleString("ja-JP");
+  function formatInt(n) { return Number(n).toLocaleString("ja-JP"); }
+  function formatSignedInt(n) {
+    const sign = n >= 0 ? "+" : "−";
+    return sign + formatInt(Math.abs(n));
   }
 
   function showToast(msg) {
     toast.textContent = msg;
     if (!toast.open) toast.showModal();
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => {
-      try { toast.close(); } catch {}
-    }, 1100);
+    showToast._t = setTimeout(() => { try { toast.close(); } catch {} }, 1100);
   }
 })();
