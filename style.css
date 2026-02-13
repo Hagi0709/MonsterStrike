@@ -3,13 +3,15 @@
   --bg:#ffffff;
   --text:#111111;
   --muted:#8a8a8a;
-  --line:rgba(0,0,0,.10);
 
-  --header:#f3c312;        /* 画像っぽい黄色 */
+  --header:#f3c312;
   --headerText:#1b1b1b;
 
-  --blue:#1f75ff;          /* 数字の青 */
-  --select:#ececec;        /* 選択セル */
+  --blue:#1f75ff;
+  --red:#ff3b30;
+  --orange:#ff9500;
+
+  --select:#ececec;
   --today:#f6f6f6;
 
   --pillBg:#f6f6f6;
@@ -17,19 +19,16 @@
 
   --fab:#f3c312;
   --fabShadow: 0 16px 35px rgba(0,0,0,.22);
-
-  --radius: 16px;
 }
 
 *{box-sizing:border-box}
-html,body{
-  touch-action: manipulation;height:100%}
+html,body{height:100%}
 body{
-  touch-action: manipulation;
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
 }
 
 /* Top bar */
@@ -76,9 +75,7 @@ body{
 }
 
 /* Screen */
-.screen{
-  padding-bottom: 120px; /* total pill + fab */
-}
+.screen{ padding-bottom: 120px; }
 
 .dow{
   display:grid;
@@ -89,11 +86,28 @@ body{
 }
 .dow > div{ text-align:center; }
 
+/* スライド用枠 */
+.grid-wrap{
+  position: relative;
+  overflow: hidden;
+  padding: 10px 14px 20px;
+  min-height: 420px; /* iPhoneで高さが揺れないように */
+}
 .grid{
+  position: absolute;
+  inset: 10px 14px 20px 14px; /* grid-wrap padding と同じ */
   display:grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 18px 8px;
-  padding: 10px 14px 20px;
+  will-change: transform, opacity;
+}
+.grid-current{ opacity: 1; transform: translateX(0); }
+.grid-enter-right{ opacity: 0; transform: translateX(18%); }
+.grid-enter-left{ opacity: 0; transform: translateX(-18%); }
+.grid-exit-right{ opacity: 0; transform: translateX(18%); }
+.grid-exit-left{ opacity: 0; transform: translateX(-18%); }
+.grid-anim{
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
 /* Day cell */
@@ -113,32 +127,32 @@ body{
   pointer-events: none;
 }
 
-.day.selected{
-  background: var(--select);
-}
+.day.selected{ background: var(--select); }
+.day.today:not(.selected){ background: var(--today); }
+.day.today .dnum{ color: var(--orange); } /* 今日だけオレンジ */
 
-.day.today:not(.selected){
-  background: var(--today);
-}
-
+/* 日付 */
 .dnum{
   font-size: 22px;
   font-weight: 800;
   text-align:center;
+  white-space: nowrap;
 }
 
+/* 増加量 */
 .exp{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   margin-top: 8px;
   text-align:center;
-  font-size: 16px;
   font-weight: 800;
-  color: var(--blue);
   font-variant-numeric: tabular-nums;
   letter-spacing: .01em;
+  color: var(--blue);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
+.exp.neg{ color: var(--red); }
 
 /* Bottom total pill */
 .total-wrap{
@@ -167,13 +181,10 @@ body{
   opacity: .9;
 }
 .total-num{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-weight: 900;
   color: var(--blue);
-  font-size: 22px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* FAB */
@@ -202,14 +213,9 @@ body{
   width: min(520px, calc(100vw - 24px));
   border-radius: 18px;
 }
-.dialog::backdrop{
-  background: rgba(0,0,0,.25);
-}
+.dialog::backdrop{ background: rgba(0,0,0,.25); }
 
-.dialog-card{
-  padding: 14px;
-  background: #fff;
-}
+.dialog-card{ padding: 14px; background: #fff; }
 
 .dialog-head{
   display:flex;
@@ -217,10 +223,7 @@ body{
   justify-content:space-between;
   margin-bottom: 10px;
 }
-.dialog-title{
-  font-size: 16px;
-  font-weight: 900;
-}
+.dialog-title{ font-size: 16px; font-weight: 900; }
 .dialog-close{
   width: 40px;
   height: 40px;
@@ -231,9 +234,9 @@ body{
   cursor:pointer;
 }
 
-.dialog-body{
-  touch-action: manipulation; padding: 6px 2px 10px; }
+.dialog-body{ padding: 6px 2px 10px; }
 .row{ margin-bottom: 12px; }
+.row.mini{ margin-top: 6px; margin-bottom: 6px; }
 .label{
   display:block;
   font-size: 12px;
@@ -244,6 +247,12 @@ body{
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
+.preview{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.preview .plus{ color: var(--blue); }
+.preview .neg{ color: var(--red); }
 
 .input{
   width: 100%;
