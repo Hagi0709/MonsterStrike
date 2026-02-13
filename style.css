@@ -137,6 +137,7 @@ body{
 
 .day.selected{ background: var(--select); }
 .day.today:not(.selected){ background: var(--today); }
+.day.sun .dnum{ color: var(--red); }
 .day.today .dnum{ color: var(--orange); } /* 今日だけオレンジ */
 
 /* 日付（小さく・細く） */
@@ -150,6 +151,7 @@ body{
 
 /* 増加量 */
 .exp{
+  width: 100%;
   margin-top: 8px;
   text-align:center;
   font-weight: 800;
