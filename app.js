@@ -8,7 +8,6 @@
   // UI state
   let viewDate = new Date();         // 表示月
   let selected = toYMD(new Date());  // 選択日
-  let hideOutMonth = false;          // 月外セルを隠す
   let animating = false;
 
   // Elements
@@ -17,7 +16,6 @@
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
   const monthTotalEl = document.getElementById("monthTotal");
 
-  const muteBtn = document.getElementById("muteBtn");
   const menuBtn = document.getElementById("menuBtn");
   const fab = document.getElementById("fab");
 
@@ -78,12 +76,6 @@
   }, { passive: true });
 
   // Events
-  muteBtn.addEventListener("click", () => {
-    hideOutMonth = !hideOutMonth;
-    muteBtn.querySelector(".icon").textContent = hideOutMonth ? "🔔" : "🔕";
-    renderNoAnim();
-  });
-
   menuBtn.addEventListener("click", () => menuDialog.showModal());
 
   prevBtn.addEventListener("click", () => changeMonth(-1));
@@ -225,7 +217,6 @@
       animating = false;
     };
 
-    // newGridのtransitionで確実に拾う
     newGrid.addEventListener("transitionend", cleanup, { once: true });
 
     // 合計更新
@@ -257,11 +248,6 @@
       if (c.out) cell.classList.add("out");
       if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.ymd === selected) cell.classList.add("selected");
-
-      if (hideOutMonth && c.out) {
-        cell.style.visibility = "hidden";
-        cell.style.pointerEvents = "none";
-      }
 
       const dn = document.createElement("div");
       dn.className = "dnum";
@@ -420,7 +406,7 @@
     try { inputEl.setSelectionRange(pos, pos); } catch {}
   }
 
-  // ---- Fit text to avoid cell shifting ----
+  // ---- Fit text (shrink font; keep columns fixed) ----
   function fitText(el, basePx, minPx){
     el.style.fontSize = basePx + "px";
 
