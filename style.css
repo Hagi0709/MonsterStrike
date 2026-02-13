@@ -1,90 +1,321 @@
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>モンスト ランク上げ記録</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <header class="app-header">
-    <div class="brand">
-      <div class="logo">MS</div>
-      <div>
-        <h1>モンスト ランク上げ記録</h1>
-        <p class="sub">毎日の獲得経験値をカレンダーで管理（端末内に保存）</p>
-      </div>
-    </div>
+/* モンスト EXPカレンダー - style.css */
+:root{
+  --bg:#ffffff;
+  --text:#111111;
+  --muted:#8a8a8a;
+  --line:rgba(0,0,0,.10);
 
-    <div class="header-actions">
-      <button id="todayBtn" class="btn">今日</button>
-      <div class="month-nav">
-        <button id="prevBtn" class="icon-btn" aria-label="前の月">‹</button>
-        <div class="month-label" id="monthLabel">----</div>
-        <button id="nextBtn" class="icon-btn" aria-label="次の月">›</button>
-      </div>
-      <button id="exportBtn" class="btn btn-ghost">エクスポート</button>
-      <label class="btn btn-ghost file-btn">
-        インポート
-        <input id="importInput" type="file" accept="application/json" />
-      </label>
-    </div>
-  </header>
+  --header:#f3c312;        /* 画像っぽい黄色 */
+  --headerText:#1b1b1b;
 
-  <main class="layout">
-    <section class="calendar-card">
-      <div class="calendar-top">
-        <div class="stats">
-          <div class="stat">
-            <div class="stat-label">今月合計</div>
-            <div class="stat-value" id="monthTotal">0</div>
-          </div>
-          <div class="stat">
-            <div class="stat-label">直近7日合計</div>
-            <div class="stat-value" id="weekTotal">0</div>
-          </div>
-        </div>
-        <div class="hint">日付をタップして入力。0なら削除。</div>
-      </div>
+  --blue:#1f75ff;          /* 数字の青 */
+  --select:#ececec;        /* 選択セル */
+  --today:#f6f6f6;
 
-      <div class="dow">
-        <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
-      </div>
+  --pillBg:#f6f6f6;
+  --pillShadow: 0 10px 30px rgba(0,0,0,.15);
 
-      <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
-    </section>
+  --fab:#f3c312;
+  --fabShadow: 0 16px 35px rgba(0,0,0,.22);
 
-    <aside class="side-card">
-      <h2>入力</h2>
-      <div class="field">
-        <label>日付</label>
-        <div class="date-pill" id="selectedDate">----</div>
-      </div>
+  --radius: 16px;
+}
 
-      <div class="field">
-        <label for="xpInput">獲得経験値（増加量）</label>
-        <input id="xpInput" class="input" inputmode="numeric" placeholder="例: 250000" />
-        <div class="muted">※半角数字。0にするとその日の記録を削除。</div>
-      </div>
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
+  background: var(--bg);
+  color: var(--text);
+}
 
-      <div class="actions">
-        <button id="saveBtn" class="btn btn-primary">保存</button>
-        <button id="clearBtn" class="btn btn-danger">削除</button>
-      </div>
+/* Top bar */
+.topbar{
+  height: 86px;
+  padding: 16px 14px 12px;
+  background: var(--header);
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.top-title{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  flex: 1;
+  margin: 0 10px;
+}
+.month{
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--headerText);
+  letter-spacing: .02em;
+}
+.top-icon{
+  appearance:none;
+  border:none;
+  background: transparent;
+  width: 44px;
+  height: 44px;
+  display:grid;
+  place-items:center;
+  border-radius: 12px;
+  cursor:pointer;
+}
+.top-icon:active{transform: translateY(1px)}
+.icon{
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(0,0,0,.45);
+}
 
-      <hr class="sep" />
+/* Screen */
+.screen{
+  padding-bottom: 120px; /* total pill + fab */
+}
 
-      <h2>一覧（今月）</h2>
-      <div id="monthList" class="list"></div>
+.dow{
+  display:grid;
+  grid-template-columns: repeat(7,1fr);
+  padding: 12px 14px 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dow > div{ text-align:center; }
 
-      <div class="footer-note">
-        <div class="muted">保存先: この端末のブラウザ（localStorage）</div>
-      </div>
-    </aside>
-  </main>
+.grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 18px 8px;
+  padding: 10px 14px 20px;
+}
 
-  <dialog id="toast" class="toast" aria-live="polite"></dialog>
+/* Day cell */
+.day{
+  min-height: 74px;
+  border-radius: 14px;
+  padding: 10px 8px 8px;
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+}
+.day:hover{ background: rgba(0,0,0,.03); }
+.day:active{ transform: translateY(1px); }
 
-  <script src="app.js"></script>
-</body>
-</html>
+.day.out{
+  opacity: .25;
+  pointer-events: none;
+}
+
+.day.selected{
+  background: var(--select);
+}
+
+.day.today:not(.selected){
+  background: var(--today);
+}
+
+.dnum{
+  font-size: 22px;
+  font-weight: 800;
+  text-align:center;
+}
+
+.exp{
+  margin-top: 8px;
+  text-align:center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+
+/* Bottom total pill */
+.total-wrap{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+  z-index: 9;
+}
+.total-pill{
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: var(--pillBg);
+  box-shadow: var(--pillShadow);
+}
+.yen{
+  font-weight: 900;
+  color: var(--blue);
+  opacity: .9;
+}
+.total-num{
+  font-weight: 900;
+  color: var(--blue);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* FAB */
+.fab{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: none;
+  background: var(--fab);
+  color: rgba(0,0,0,.55);
+  font-size: 34px;
+  font-weight: 900;
+  box-shadow: var(--fabShadow);
+  cursor:pointer;
+  z-index: 10;
+}
+.fab:active{ transform: translateY(1px); }
+
+/* Dialogs */
+.dialog{
+  border: none;
+  padding: 0;
+  width: min(520px, calc(100vw - 24px));
+  border-radius: 18px;
+}
+.dialog::backdrop{
+  background: rgba(0,0,0,.25);
+}
+
+.dialog-card{
+  padding: 14px;
+  background: #fff;
+}
+
+.dialog-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 10px;
+}
+.dialog-title{
+  font-size: 16px;
+  font-weight: 900;
+}
+.dialog-close{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,.06);
+  font-size: 20px;
+  cursor:pointer;
+}
+
+.dialog-body{ padding: 6px 2px 10px; }
+.row{ margin-bottom: 12px; }
+.label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.value{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.input{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.12);
+  font-size: 16px;
+  outline:none;
+}
+.input:focus{
+  border-color: rgba(31,117,255,.45);
+  box-shadow: 0 0 0 3px rgba(31,117,255,.12);
+}
+
+.help{
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dialog-actions{
+  display:flex;
+  gap: 10px;
+  padding-top: 4px;
+}
+.btn{
+  flex: 1;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 12px;
+  font-weight: 900;
+  cursor:pointer;
+}
+.btn.primary{
+  background: rgba(31,117,255,.12);
+  color: #0a2f7a;
+}
+.btn.danger{
+  background: rgba(255,0,0,.08);
+  color: #7a1111;
+}
+
+/* Menu */
+.menu .menu-btn{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(0,0,0,.03);
+  font-weight: 800;
+  cursor:pointer;
+}
+.menu .menu-btn:active{transform: translateY(1px)}
+.menu .menu-row{
+  display:flex;
+  gap:10px;
+  margin-top: 10px;
+}
+.menu .menu-row .menu-btn{flex:1}
+.menu .menu-btn.danger{
+  background: rgba(255,0,0,.08);
+  border-color: rgba(255,0,0,.15);
+}
+.file-btn input{display:none}
+.sep{
+  height: 1px;
+  background: rgba(0,0,0,.10);
+  margin: 12px 0;
+}
+.tiny{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Toast */
+.toast{
+  border:none;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.82);
+  color: #fff;
+}
+.toast::backdrop{background: transparent}
