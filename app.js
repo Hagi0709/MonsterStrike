@@ -1,14 +1,14 @@
-// モンスト EXPカレンダー（累計入力→増加量表示）- app.js
+// モンスト EXPカレンダー - app.js
 (() => {
-  const STORAGE_KEY = "monst_cumxp_v1";
+  const STORAGE_KEY = "monst_xp_daily_v2";
 
-  /** @type {Record<string, number>} 累計経験値 */
-  let cum = load();
+  /** @type {Record<string, number>} */
+  let data = load();
 
   // UI state
   let viewDate = new Date();         // 表示月
   let selected = toYMD(new Date());  // 選択日
-  let hideOutMonth = false;          // 月外セルを隠す
+  let hideOutMonth = false;          // 画像左上の「非表示」っぽい挙動
 
   // Elements
   const monthLabel = document.getElementById("monthLabel");
@@ -21,8 +21,7 @@
 
   const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
-  const cumInput = document.getElementById("cumInput");
-  const previewEl = document.getElementById("preview");
+  const xpInput = document.getElementById("xpInput");
   const saveBtn = document.getElementById("saveBtn");
   const deleteBtn = document.getElementById("deleteBtn");
 
@@ -36,7 +35,80 @@
 
   const toast = document.getElementById("toast");
 
+  // --- UX helpers ---
+  // iOS/モバイル: ピンチ/ダブルタップズームを抑止（完全禁止はブラウザ仕様で限界あり）
+  document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("gestureend", (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+
+  // 横スワイプで月移動（カレンダー領域）
+  let touchX = null;
+  const swipeTarget = document.querySelector(".screen");
+  swipeTarget.addEventListener("touchstart", (e) => {
+    if (entryDialog.open || menuDialog.open) return;
+    touchX = e.changedTouches[0].clientX;
+  }, { passive: true });
+
+  swipeTarget.addEventListener("touchend", (e) => {
+    if (entryDialog.open || menuDialog.open) return;
+    if (touchX == null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    touchX = null;
+
+    const threshold = 42;
+    if (Math.abs(dx) < threshold) return;
+
+    // 左スワイプで次の月、右スワイプで前の月
+    viewDate = addMonths(viewDate, dx < 0 ? 1 : -1);
+    render();
+  }, { passive: true });
+
+  // 入力中に , を付ける（カーソル位置もなるべく維持）
+  function formatNumberInput(inputEl){
+    const raw = inputEl.value;
+    const selStart = inputEl.selectionStart ?? raw.length;
+
+    // カーソルより左にある「数字の数」を数える（, は無視）
+    let digitsLeft = 0;
+    for (let i = 0; i < selStart; i++){
+      const ch = raw[i];
+      if (ch >= "0" && ch <= "9") digitsLeft++;
+    }
+
+    const digits = raw.replace(/[^0-9]/g, "");
+    const formatted = digits === "" ? "" : Number(digits).toLocaleString("ja-JP");
+    inputEl.value = formatted;
+
+    // 同じ「数字の数」の位置へカーソルを戻す
+    let pos = formatted.length;
+    if (digitsLeft === 0) pos = 0;
+    else {
+      let count = 0;
+      for (let i = 0; i < formatted.length; i++){
+        const ch = formatted[i];
+        if (ch >= "0" && ch <= "9") count++;
+        if (count >= digitsLeft){ pos = i + 1; break; }
+      }
+    }
+    try { inputEl.setSelectionRange(pos, pos); } catch {}
+  }
+
+  // 文字数に合わせてフォントを小さく（枠ズレ防止）
+  function autoFontSize(el, opts){
+    const text = (el.textContent || "").trim();
+    const len = text.length;
+    let size = opts.base;
+    for (const step of opts.steps){
+      if (len >= step.len) size = step.size;
+    }
+    size = Math.max(opts.min, Math.min(opts.base, size));
+    el.style.fontSize = size + "px";
+  }
+
+
   // Init
+  // 月初に固定して表示が安定
   const now = new Date();
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   render();
@@ -50,9 +122,14 @@
 
   menuBtn.addEventListener("click", () => menuDialog.showModal());
 
-  prevBtn.addEventListener("click", () => { viewDate = addMonths(viewDate, -1); render(); });
-  nextBtn.addEventListener("click", () => { viewDate = addMonths(viewDate, 1); render(); });
-
+  prevBtn.addEventListener("click", () => {
+    viewDate = addMonths(viewDate, -1);
+    render();
+  });
+  nextBtn.addEventListener("click", () => {
+    viewDate = addMonths(viewDate, 1);
+    render();
+  });
   todayBtn.addEventListener("click", () => {
     const t = new Date();
     viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
@@ -61,31 +138,31 @@
     menuDialog.close();
   });
 
-  // 仕様：日付を選択 → 右下＋で入力
   fab.addEventListener("click", () => {
-    openEntry(selected);
+    // 今日をすぐ入力
+    const t = new Date();
+    selected = toYMD(t);
+    // 今月以外表示中なら今月へ
+    viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
+    openEntry();
+    render();
   });
 
-  // カレンダーの日付タップは「選択のみ」（入力は＋）
-  // ただし選択後に即見えるようハイライト
-  // （月外は選択できない仕様のまま）
-  // ※月外を隠している場合は visibility hidden なので押せない
-
   saveBtn.addEventListener("click", () => {
-    const n = normalizeNumber(cumInput.value);
+    const n = normalizeNumber(xpInput.value);
     if (n === null) {
-      showToast("数字だけ（例: 123456789）");
+      showToast("数字だけ（例: 250000）");
       return;
     }
     if (n === 0) {
-      delete cum[selected];
+      delete data[selected];
       persist();
       showToast("削除しました");
       entryDialog.close();
       render();
       return;
     }
-    cum[selected] = n;
+    data[selected] = n;
     persist();
     showToast("保存しました");
     entryDialog.close();
@@ -93,33 +170,29 @@
   });
 
   deleteBtn.addEventListener("click", () => {
-    if (cum[selected] == null) {
+    if (data[selected] == null) {
       showToast("この日は記録なし");
       return;
     }
-    delete cum[selected];
+    delete data[selected];
     persist();
     showToast("削除しました");
     entryDialog.close();
     render();
   });
 
-  cumInput.addEventListener("input", () => {
-    updatePreview();
-  });
-
   exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
-      version: 3,
+      version: 2,
       exportedAt: new Date().toISOString(),
-      cumulative: cum
+      data
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `monst_cumxp_${toYMD(new Date())}.json`;
+    a.download = `monst_xp_${toYMD(new Date())}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -134,11 +207,7 @@
     try {
       const text = await file.text();
       const json = JSON.parse(text);
-
-      // 旧形式(data)も一応拾う
-      const imported = (json && (json.cumulative || json.data) && typeof (json.cumulative || json.data) === "object")
-        ? (json.cumulative || json.data)
-        : null;
+      const imported = (json && json.data && typeof json.data === "object") ? json.data : null;
       if (!imported) throw new Error("invalid");
 
       const cleaned = {};
@@ -147,7 +216,7 @@
         const num = typeof v === "number" ? v : normalizeNumber(String(v));
         if (num && num > 0) cleaned[k] = num;
       }
-      cum = { ...cum, ...cleaned };
+      data = { ...data, ...cleaned };
       persist();
       showToast("インポートしました");
       menuDialog.close();
@@ -160,19 +229,17 @@
   });
 
   wipeBtn.addEventListener("click", () => {
-    cum = {};
+    // 迷う余地がないように即削除（必要なら後で確認ダイアログにする）
+    data = {};
     persist();
     showToast("全データ削除");
     menuDialog.close();
     render();
   });
 
-  // Rendering
+  // Calendar render
   function render() {
     monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
-
-    // 先に差分マップを作る（全期間）
-    const deltaMap = buildDeltaMap(cum);
 
     calendarGrid.innerHTML = "";
     const cells = buildCalendarCells(viewDate);
@@ -186,6 +253,7 @@
       if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.ymd === selected) cell.classList.add("selected");
 
+      // hide out-of-month like screenshot's "mute" behavior
       if (hideOutMonth && c.out) {
         cell.style.visibility = "hidden";
         cell.style.pointerEvents = "none";
@@ -196,108 +264,46 @@
       dn.textContent = String(c.day);
       cell.appendChild(dn);
 
-      const d = deltaMap[c.ymd]; // 前回からの増加量（前回がある場合のみ）
-      const exp = document.createElement("div");
-      exp.className = "exp";
-
-      if (typeof d === "number") {
-        if (d < 0) exp.classList.add("neg");
-        exp.textContent = formatSignedInt(d);
+      const v = data[c.ymd];
+      if (v != null) {
+        const exp = document.createElement("div");
+        exp.className = "exp";
+        exp.textContent = formatInt(v);
+        cell.appendChild(exp);
       } else {
-        // 前回値がなければ表示なし（高さだけ確保）
+        // 空でも高さを揃える（画像っぽく）
+        const exp = document.createElement("div");
+        exp.className = "exp";
         exp.style.visibility = "hidden";
         exp.textContent = "0";
+        cell.appendChild(exp);
       }
-      cell.appendChild(exp);
 
       cell.addEventListener("click", () => {
         selected = c.ymd;
-        // 月外を押したらその月へ移動（ただし out は pointer-events none なので通常来ない）
+        // 月外を押したらその月に移動
+        if (c.out) {
+          const [yy, mm] = c.ymd.split("-").map(Number);
+          viewDate = new Date(yy, mm - 1, 1);
+        }
+        openEntry();
         render();
       });
 
       calendarGrid.appendChild(cell);
     }
 
-    // 今月合計（増加量の合計）
-    monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+    monthTotalEl.textContent = formatInt(sumMonth(viewDate));
   }
 
-  // 累計入力ダイアログ
-  function openEntry(ymd) {
-    selected = ymd;
+  function openEntry() {
     selectedDateEl.textContent = selected;
-    cumInput.value = cum[selected] != null ? String(cum[selected]) : "";
-    updatePreview();
+    xpInput.value = data[selected] != null ? String(data[selected]) : "";
+    // iOS: showModal前にfocusすると事故ることがあるので、開いてから
     entryDialog.showModal();
-    setTimeout(() => cumInput.focus(), 50);
+    setTimeout(() => xpInput.focus(), 50);
   }
 
-  function updatePreview() {
-    const n = normalizeNumber(cumInput.value);
-    if (n === null) {
-      previewEl.textContent = "—";
-      return;
-    }
-    if (n === 0) {
-      previewEl.textContent = "削除";
-      return;
-    }
-    const prev = findPrevCumulative(selected, cum);
-    if (!prev) {
-      previewEl.textContent = "前回記録なし（増加量は表示されません）";
-      return;
-    }
-    const diff = n - prev.value;
-    const sign = diff >= 0 ? "+" : "−";
-    const cls = diff >= 0 ? "plus" : "neg";
-    previewEl.innerHTML = `前回(${prev.date})との差：<span class="${cls}">${sign}${formatInt(Math.abs(diff))}</span>`;
-  }
-
-  // Build delta map from cumulative records
-  function buildDeltaMap(cumulative) {
-    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
-    keys.sort(); // YYYY-MM-DD なので文字列ソートでOK
-
-    /** @type {Record<string, number>} */
-    const delta = {};
-    let prevKey = null;
-    for (const k of keys) {
-      const v = cumulative[k];
-      if (typeof v !== "number") continue;
-      if (prevKey != null) {
-        const pv = cumulative[prevKey];
-        if (typeof pv === "number") delta[k] = v - pv;
-      }
-      prevKey = k;
-    }
-    return delta;
-  }
-
-  function findPrevCumulative(dateKey, cumulative) {
-    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
-    keys.sort();
-    let prev = null;
-    for (const k of keys) {
-      if (k < dateKey) prev = k;
-      if (k >= dateKey) break;
-    }
-    if (!prev) return null;
-    return { date: prev, value: cumulative[prev] };
-  }
-
-  function sumMonthDelta(d, deltaMap) {
-    const y = d.getFullYear();
-    const m = d.getMonth() + 1;
-    const prefix = `${y}-${pad2(m)}`;
-    let s = 0;
-    for (const [k, v] of Object.entries(deltaMap)) {
-      if (k.startsWith(prefix) && typeof v === "number") s += v;
-    }
-    return s;
-  }
-
-  // Calendar generation
   function buildCalendarCells(d) {
     const year = d.getFullYear();
     const month = d.getMonth();
@@ -322,7 +328,7 @@
 
   // Storage
   function persist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cum));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
   function load() {
@@ -340,6 +346,18 @@
     } catch {
       return {};
     }
+  }
+
+  // Stats
+  function sumMonth(d) {
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const prefix = `${y}-${pad2(m)}`;
+    let s = 0;
+    for (const [k, v] of Object.entries(data)) {
+      if (k.startsWith(prefix)) s += v;
+    }
+    return s;
   }
 
   // Utils
@@ -360,19 +378,16 @@
   function normalizeNumber(s) {
     const t = (s ?? "").toString().trim();
     if (t === "") return 0;
-    if (!/^\d+$/.test(t)) return null;
-    const n = Number(t);
+    if (!/^\d[\d,]*$/.test(t)) return null;
+    const digits = t.replace(/,/g, "");
+    if (digits === "") return 0;
+    const n = Number(digits);
     if (!Number.isFinite(n)) return null;
     return Math.max(0, Math.floor(n));
   }
 
   function formatInt(n) {
     return Number(n).toLocaleString("ja-JP");
-  }
-
-  function formatSignedInt(n) {
-    const sign = n >= 0 ? "+" : "−";
-    return sign + formatInt(Math.abs(n));
   }
 
   function showToast(msg) {
