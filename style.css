@@ -9,7 +9,6 @@
 
   --blue:#1f75ff;
   --red:#ff3b30;
-  --orange:#ff9500;
 
   --select:#ececec;
   --today:#f6f6f6;
@@ -28,7 +27,6 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
   background: var(--bg);
   color: var(--text);
-  touch-action: manipulation;
 }
 
 /* Top bar */
@@ -42,10 +40,6 @@ body{
   position: sticky;
   top: 0;
   z-index: 10;
-}
-.top-spacer{
-  width: 44px;
-  height: 44px;
 }
 .top-title{
   display:flex;
@@ -90,29 +84,11 @@ body{
 }
 .dow > div{ text-align:center; }
 
-/* スライド用枠 */
-.grid-wrap{
-  position: relative;
-  overflow: hidden;
-  padding: 10px 14px 20px;
-  min-height: 420px; /* iPhoneで高さが揺れないように */
-}
 .grid{
-  position: absolute;
-  inset: 10px 14px 20px 14px; /* grid-wrap padding と同じ */
   display:grid;
-  /* 列幅固定（中身の最小幅で列が広がらない） */
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 18px 8px;
-  will-change: transform, opacity;
-}
-.grid-current{ opacity: 1; transform: translateX(0); }
-.grid-enter-right{ opacity: 0; transform: translateX(18%); }
-.grid-enter-left{ opacity: 0; transform: translateX(-18%); }
-.grid-exit-right{ opacity: 0; transform: translateX(18%); }
-.grid-exit-left{ opacity: 0; transform: translateX(-18%); }
-.grid-anim{
-  transition: transform 220ms ease, opacity 220ms ease;
+  padding: 10px 14px 20px;
 }
 
 /* Day cell */
@@ -123,9 +99,6 @@ body{
   position: relative;
   cursor: pointer;
   background: transparent;
-
-  /* gridの列幅固定のため */
-  min-width: 0;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
@@ -137,33 +110,21 @@ body{
 
 .day.selected{ background: var(--select); }
 .day.today:not(.selected){ background: var(--today); }
-.day.sun .dnum{ color: var(--red); }
-.day.today .dnum{ color: var(--orange); } /* 今日だけオレンジ */
 
-/* 日付（小さく・細く） */
 .dnum{
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 800;
   text-align:center;
-  white-space: nowrap;
-  min-width: 0;
 }
 
-/* 増加量 */
 .exp{
-  width: 100%;
   margin-top: 8px;
   text-align:center;
+  font-size: 16px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: .01em;
   color: var(--blue);
-
-  /* 列幅を押し広げない */
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
 }
 .exp.neg{ color: var(--red); }
 
@@ -196,10 +157,8 @@ body{
 .total-num{
   font-weight: 900;
   color: var(--blue);
+  font-size: 22px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  min-width: 0;
-  overflow: hidden;
 }
 
 /* FAB */
