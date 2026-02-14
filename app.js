@@ -167,7 +167,7 @@ const entryDialog = document.getElementById("entryDialog");
   // Init
   function syncInlineOnInit(){
     // 初期表示でスクロールが動かないように、フォーカス無しで同期
-    selectedDateEl.textContent = selected;
+    selectedDateEl.textContent = formatJPDate(selected);
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updateRealtime();
   }
@@ -408,7 +408,7 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "6";
+  exp.dataset.fitBase = "10";
   exp.dataset.fitTemplate = "+XXX,XXX,XXX";
   exp.dataset.fitMin = "6";
 } else {
@@ -430,7 +430,7 @@ targetGrid.appendChild(cell);
   // ---- Entry ----
   function openEntry(ymd) {
     selected = ymd;
-    selectedDateEl.textContent = selected;
+    selectedDateEl.textContent = formatJPDate(selected);
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updateRealtime();
     /* モーダルは使わない */
@@ -438,7 +438,7 @@ targetGrid.appendChild(cell);
 }
 
   function updateRealtime() {
-    selectedDateEl.textContent = selected;
+    selectedDateEl.textContent = formatJPDate(selected);
     const deltaMap = buildDeltaMap(cum);
     monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
     if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
@@ -584,14 +584,13 @@ function syncHeaderFont(){
 
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
-  // 仕様：増加量の文字サイズは 8px に固定（縮小・scaleXはしない）
   const list = scopeEl.querySelectorAll('.exp');
-  if (!list.length) return;
-  list.forEach(el => {
-    el.style.transform = "";
-    el.style.transformOrigin = "center";
-    el.style.fontSize = "8px";
+  if(!list.length) return;
+  list.forEach(el=>{
+    // 自動で全文表示できるようfitTextを使用
+    fitText(el,10,6,"+XXX,XXX,XXX");
   });
+});
 }
 
 function calcFitFont(el, basePx, minPx, templateStr){
@@ -703,7 +702,13 @@ function fitText(el, basePx, minPx, templateStr){
   }
 }
 
-  // ---- Utils ----
+  function formatJPDate(ymd){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
+  const [y,m,d] = ymd.split("-");
+  return `${Number(m)}月${Number(d)}日に`;
+}
+
+// ---- Utils ----
   function toYMD(date) {
     const y = date.getFullYear();
     const m = pad2(date.getMonth() + 1);
