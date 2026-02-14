@@ -1,5 +1,7 @@
   /* モンスト EXPカレンダー - style.css */
   :root{
+    --topLeftMax: 42vw;
+    --topCenterMax: 58vw;
     --bg:#ffffff;
     --text:#111111;
     --muted:#8a8a8a;
@@ -39,26 +41,34 @@
 
   /* Top bar */
   .topbar{
-    height: 86px;
-    padding: 16px 14px 12px;
-    background: var(--header);
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .top-spacer{ width:44px; height:44px; }
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  height: 86px;
+  padding: 16px 14px 12px;
+  background: var(--header);
+
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* left / center / right (center fixed) */;
+}
+  .top-spacer{
+  grid-column: 3;
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+}
   .top-title{
-    display:flex;
-    flex-direction: column;
-    align-items:center;
-    justify-content:flex-end;
-    flex: 1;
-    margin: 0 10px;
-    gap: 2px;
-  }
+  max-width: var(--topCenterMax);
+  overflow: hidden;
+  grid-column: 2;
+  justify-self: center;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 2px;
+}
   .month{
     font-weight: 900;
     font-size: 22px;
@@ -202,14 +212,13 @@
 
 
   .day.selected{ background: var(--select); }
-  .day.today:not(.selected){ background: var(--today); }
+  .day.today:not(.selected){ background: transparent; }
 
   /* 日曜日は赤（今日オレンジ優先） */
-  .day
   .day.today .dnum{ color: var(--orange); }
 
   /* 日付：小さく、細く */
-  \.dnum{
+  .dnum{
     font-size: 16px;
     font-weight: 600;
     text-align:center;
@@ -455,6 +464,8 @@
 
   /* 1画面に収める（カレンダー＋入力欄） */
   :root{
+    --topLeftMax: 42vw;
+    --topCenterMax: 58vw;
     --topbarH: 86px;
     --dowH: 44px;
     --entryH: 140px;
@@ -483,3 +494,90 @@
 /* 曜日色 */
 .dow div:nth-child(1){ color: var(--red); }  /* 日 */
 .dow div:nth-child(7){ color: var(--blue); } /* 土 */
+
+
+/* 目標ランク（左上） */
+.top-left{
+  grid-column: 1;
+  justify-self: start;
+  align-self: flex-start;
+  margin-top: 2px;
+  max-width: var(--topLeftMax);
+  display:flex;
+  align-items:flex-start;
+}
+
+.target-btn{
+  appearance:none;
+  border:0;
+  background:transparent;
+  padding:0;
+  margin:0;
+  text-align:left;
+  color:var(--headerText);
+  font-weight:900;
+  line-height:1.05;
+}
+
+.target-label{
+  font-size:14px;
+  letter-spacing:0.2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.target-need{
+  margin-top:4px;
+  font-size:12px;
+  font-weight:800;
+  opacity:0.95;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Today: orange outline only / Selected: filled background */
+.day.today{
+  outline: 2px solid rgba(255,149,0,.32);
+  outline-offset: -2px;
+  background: transparent;
+}
+.day.today.selected{
+  outline: none;
+  background: var(--select);
+}
+
+/* Progress ring (under 必要EXP) */
+.target-ring-wrap{
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  gap: 6px;
+}
+.target-ring{
+  width: 24px;
+  height: 24px;
+  display:block;
+}
+.target-ring .ring-bg{
+  fill: none;
+  stroke: rgba(0,0,0,.18);
+  stroke-width: 4;
+}
+.target-ring .ring-bar{
+  fill: none;
+  stroke: rgba(0,0,0,.65);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 20px 20px;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.target-pct{
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--headerText);
+  white-space: nowrap;
+}
