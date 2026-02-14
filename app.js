@@ -190,40 +190,42 @@
   }
 
   function renderAnimated(dir) {
-    animating = true;
+  animating = true;
 
-    monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
+  monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
 
-    const deltaMap = buildDeltaMap(cum);
-    const newGrid = document.createElement("div");
-    newGrid.className = "grid grid-anim " + (dir === "next" ? "grid-enter-right" : "grid-enter-left");
-    fillGrid(newGrid, viewDate, deltaMap);
+  const deltaMap = buildDeltaMap(cum);
 
-    // old grid animate out
-    calendarGrid.classList.add("grid-anim");
-    calendarGrid.classList.remove("grid-current");
-    calendarGrid.classList.add(dir === "next" ? "grid-exit-left" : "grid-exit-right");
+  const newGrid = document.createElement("div");
+  newGrid.className = "grid grid-anim " + (dir === "next" ? "grid-enter-right" : "grid-enter-left");
+  fillGrid(newGrid, viewDate, deltaMap);
 
-    gridWrap.appendChild(newGrid);
+  // old grid animate out
+  calendarGrid.classList.add("grid-anim");
+  calendarGrid.classList.remove("grid-current");
+  calendarGrid.classList.add(dir === "next" ? "grid-exit-left" : "grid-exit-right");
 
-requestAnimationFrame(() => {
-  newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
-  newGrid.classList.add("grid-current");
+  gridWrap.appendChild(newGrid);
 
-  // newGridがDOMに入って幅が確定してから縮小
-  applyFits(newGrid);
-  fitText(monthTotalEl, 22, 12);
-});
+  // 合計更新（その月の増加合計）
+  monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
 
-const cleanup = () => {
-  try { calendarGrid.remove(); } catch {}
-  calendarGrid = newGrid;
-  animating = false;
-};
-newGrid.addEventListener("transitionend", cleanup, { once: true });
+  requestAnimationFrame(() => {
+    newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
+    newGrid.classList.add("grid-current");
 
-// 合計更新（その月の増加合計）
-monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+    // newGridがDOMに入って幅が確定してから縮小
+    applyFits(newGrid);
+    fitText(monthTotalEl, 22, 12);
+  });
+
+  const cleanup = () => {
+    try { calendarGrid.remove(); } catch {}
+    calendarGrid = newGrid;
+    animating = false;
+  };
+  newGrid.addEventListener("transitionend", cleanup, { once: true });
+}
 
 function renderNoAnim() {
   monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
