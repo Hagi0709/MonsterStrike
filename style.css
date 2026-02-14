@@ -174,7 +174,7 @@ body{
   justify-content: center;
 
   font-weight: 900;
-  font-size: var(--expFontPx, 18px);
+  font-size: var(--expFontPx, 10px);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
