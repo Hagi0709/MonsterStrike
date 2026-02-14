@@ -206,34 +206,41 @@
 
     gridWrap.appendChild(newGrid);
 
-    requestAnimationFrame(() => {
-      newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
-      newGrid.classList.add("grid-current");
-    });
+requestAnimationFrame(() => {
+  newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
+  newGrid.classList.add("grid-current");
 
-    const cleanup = () => {
-      try { calendarGrid.remove(); } catch {}
-      calendarGrid = newGrid;
-      animating = false;
-    };
-    newGrid.addEventListener("transitionend", cleanup, { once: true });
+  // newGridがDOMに入って幅が確定してから縮小
+  applyFits(newGrid);
+  fitText(monthTotalEl, 22, 12);
+});
 
-    // 合計更新（その月の増加合計）
-    monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
-    fitText(monthTotalEl, 22, 14);
-  }
+const cleanup = () => {
+  try { calendarGrid.remove(); } catch {}
+  calendarGrid = newGrid;
+  animating = false;
+};
+newGrid.addEventListener("transitionend", cleanup, { once: true });
 
-  function renderNoAnim() {
-    monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
+// 合計更新（その月の増加合計）
+monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
 
-    const deltaMap = buildDeltaMap(cum);
-    calendarGrid.className = "grid grid-current";
-    calendarGrid.innerHTML = "";
-    fillGrid(calendarGrid, viewDate, deltaMap);
+function renderNoAnim() {
+  monthLabel.textContent = `${viewDate.getFullYear()}年 ${viewDate.getMonth() + 1}月`;
 
-    monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+  const deltaMap = buildDeltaMap(cum);
+  calendarGrid.className = "grid grid-current";
+  calendarGrid.innerHTML = "";
+  fillGrid(calendarGrid, viewDate, deltaMap);
+
+  monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+
+  // DOM上で幅が確定してから縮小
+  requestAnimationFrame(() => {
+    applyFits(calendarGrid);
     fitText(monthTotalEl, 22, 12);
-  }
+  });
+}
 
   // ---- Grid fill ----
   function fillGrid(targetGrid, monthDate, deltaMap) {
@@ -258,14 +265,19 @@
       const exp = document.createElement("div");
       exp.className = "exp";
 
-      if (typeof d === "number") {
-        if (d < 0) exp.classList.add("neg");
-        exp.textContent = formatSignedInt(d);
-        fitText(exp, 16, 4); // 収まるまで縮小（さらに下限を下げて途切れ防止）
-      } else {
-        exp.style.visibility = "hidden";
-        exp.textContent = "0";
-      }
+if (typeof d === "number") {
+  if (d < 0) exp.classList.add("neg");
+  exp.textContent = formatSignedInt(d);
+
+  // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
+  //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
+  exp.dataset.fit = "1";
+  exp.dataset.fitBase = "16";
+  exp.dataset.fitMin = "4";
+} else {
+  exp.style.visibility = "hidden";
+  exp.textContent = "0";
+}
       cell.appendChild(exp);
 
       cell.addEventListener("click", () => {
@@ -406,7 +418,16 @@
     try { inputEl.setSelectionRange(pos, pos); } catch {}
   }
 
-  // ---- Fit text (shrink font; keep columns fixed) ----
+// ---- Fit text (shrink font; keep columns fixed) ----
+function applyFits(scopeEl){
+  const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
+  list.forEach(el => {
+    const basePx = Number(el.dataset.fitBase || 16);
+    const minPx  = Number(el.dataset.fitMin || 4);
+    fitText(el, basePx, minPx);
+  });
+}
+
 function fitText(el, basePx, minPx){
   // リセット（前回のscaleを消す）
   el.style.transform = "";
