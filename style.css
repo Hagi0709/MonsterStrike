@@ -225,9 +225,15 @@ body{
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--rank);
   white-space: nowrap;
   min-width: 0;
+
+  /* ゴールド系グラデ文字 */
+  background: linear-gradient(45deg, #B67B03 0%, #DAAF08 45%, #FEE9A0 70%, #DAAF08 85%, #B67B03 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
@@ -241,7 +247,7 @@ body{
   justify-content: center;
 
   font-weight: 900;
-  font-size: var(--expFontPx, 18px);
+  font-size: 8px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
