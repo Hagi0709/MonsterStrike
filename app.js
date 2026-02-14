@@ -1,7 +1,6 @@
 // モンスト EXPカレンダー（累計入力→増加量表示）- app.js
 (() => {
   const STORAGE_KEY = "monst_cumxp_v2";
-  let currentCumXPGlobal = 0;
 
   /** @type {Record<string, number>} 累計経験値 */
   let cum = load();
@@ -9,104 +8,22 @@
   /** @type {{rank:number,xp:number}[]} ランクテーブル（csv: 左=ランク, 右=累計経験値） */
   let rankTable = [];
   let rankTableReady = false;
-  let rankXpMap = new Map();
 
   async function loadRankTable(){
     try{
       const res = await fetch("rank_table.csv", { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const text = await res.text();
-      rankTable = [];
-      const rows = text
+      rankTable = text
         .trim()
         .split(/\r?\n/)
         .map(line => {
           const [r, x] = line.split(",");
           return { rank: Number(r), xp: Number(x) };
         })
-        .filter(v => Number.isFinite(v.rank) && Number.isFinite(v.xp));
-
-      // rank -> xp（累計）に正規化
-      const rankXp = new Map();
-
-for (const row of rows) {
-        rankXp.set(Math.floor(row.rank), Math.floor(row.xp));
-      }
-      // ---- 規則性による補完 ----
-      // 前提：
-      // - CSVは「左=ランク」「右=累計経験値」
-      // - 1501-2000 は (1499->1500 の差分)×3 を 1ランク必要EXPとして一定
-      // - 2001-2500 は (1999->2000 の差分)×3 を一定
-      // - 2501以降も「500ランク区間ごとに」(区切りランクの直前差分)×3 を一定として継続
-      //
-      // 例：
-      // 2501-3000 : (2499->2500)×3
-      // 3001-3500 : (2999->3000)×3 = (2501-3000 の一定差分)×3
-      // …を繰り返す
-
-      const MAX_RANK = 20000;
-
-      const get = (r) => rankXp.get(r);
-      const set = (r, xp) => rankXp.set(r, Math.floor(xp));
-
-      // 1501-2000
-      const xp1499 = get(1499);
-      const xp1500 = get(1500);
-      if (Number.isFinite(xp1499) && Number.isFinite(xp1500)) {
-        const d1500 = xp1500 - xp1499;     // 1499->1500 の必要EXP
-        const step1500 = d1500 * 3;        // 1501-2000 の一定差分
-        for (let r = 1501; r <= 2000; r++) {
-          if (!rankXp.has(r)) set(r, xp1500 + (r - 1500) * step1500);
-        }
-      }
-
-      // 2001-2500
-      const xp1999 = get(1999);
-      const xp2000 = get(2000);
-      if (Number.isFinite(xp1999) && Number.isFinite(xp2000)) {
-        const d2000 = xp2000 - xp1999;     // 1999->2000 の必要EXP
-        const step2000 = d2000 * 3;        // 2001-2500 の一定差分
-        for (let r = 2001; r <= 2500; r++) {
-          if (!rankXp.has(r)) set(r, xp2000 + (r - 2000) * step2000);
-        }
-      }
-
-      // 2501以降（500ランク区間ごとに step を3倍）
-      const xp2499 = get(2499);
-      const xp2500 = get(2500);
-      if (Number.isFinite(xp2499) && Number.isFinite(xp2500)) {
-        let baseRank = 2500;
-        let baseXp = xp2500;
-
-        // 2501-3000 の一定差分 = (2499->2500)×3
-        let step = (xp2500 - xp2499) * 3;
-
-        while (baseRank < MAX_RANK) {
-          const blockEnd = Math.min(baseRank + 500, MAX_RANK);
-
-          for (let r = baseRank + 1; r <= blockEnd; r++) {
-            if (!rankXp.has(r)) set(r, baseXp + (r - baseRank) * step);
-          }
-
-          // 次ブロックの基準点を更新
-          baseXp = get(blockEnd);
-          baseRank = blockEnd;
-
-          // 次の500区間は「区切り直前差分×3」なので、stepを3倍
-          step = step * 3;
-        }
-      }
-
-
-
-      // rankTable（xp昇順）
-      rankTable = Array.from(rankXp.entries())
-        .map(([rank, xp]) => ({ rank, xp }))
         .filter(v => Number.isFinite(v.rank) && Number.isFinite(v.xp))
-        .sort((a, b) => a.xp - b.xp);
-
+        .sort((a,b) => a.xp - b.xp);
       rankTableReady = rankTable.length > 0;
-      rankXpMap = new Map(rankXp);
     } catch (e) {
       console.error("rank_table.csv 読み込み失敗", e);
       rankTable = [];
@@ -141,107 +58,15 @@ for (const row of rows) {
   let animating = false;
 
   // Elements
-  let targetBtn=null, targetLabelEl=null, targetNeedEl=null, targetRingEl=null, targetPctEl=null;
-
-  // ---- Target Rank ----
-  let targetRank = Number(localStorage.getItem("targetRank") || 0) || 0;
-
-  function formatComma(n){
-    if(!Number.isFinite(n)) return "--";
-    return Math.trunc(n).toLocaleString("ja-JP");
-  }
-
-  function getCumXPByRank(r){
-    if(!Number.isFinite(r) || r<=0) return null;
-    const v = rankXpMap.get(Math.floor(r));
-    return Number.isFinite(v) ? v : null;
-  }
-
-  function setRingProgress(pct){
-    if(!targetRingEl || !targetPctEl) return;
-
-    const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
-
-    // 0%に見えて固定化したように感じるのを防ぐ（小さい進捗は小数で表示）
-    let label;
-    if (clamped > 0 && clamped < 1) label = clamped.toFixed(1);
-    else label = String(Math.round(clamped));
-    targetPctEl.textContent = label + "%";
-
-    const r = 16;
-    const c = 2 * Math.PI * r;
-    const offset = c * (1 - clamped / 100);
-
-    const bar = targetRingEl.querySelector(".ring-bar");
-    if(bar){
-      bar.style.strokeDasharray = String(c);
-      bar.style.strokeDashoffset = String(offset);
-    }
-    targetRingEl.style.visibility = "visible";
-    targetPctEl.style.visibility = "visible";
-  }
-
-  function updateTargetUI(currentCumXP){
-    if(!targetLabelEl || !targetNeedEl) return;
-
-    const hide = () => {
-      if(targetRingEl) targetRingEl.style.visibility = "hidden";
-      if(targetPctEl)  targetPctEl.style.visibility  = "hidden";
-    };
-
-    if(!targetRank){
-      targetLabelEl.textContent = "目標 --";
-      targetNeedEl.textContent = "必要EXP --";
-      hide();
-      return;
-    }
-
-    targetLabelEl.textContent = `目標 ${targetRank}`;
-    const targetCum = getCumXPByRank(targetRank);
-    if(targetCum == null || !Number.isFinite(currentCumXP)){
-      targetNeedEl.textContent = "必要EXP --";
-      hide();
-      return;
-    }
-
-    const need = Math.max(0, targetCum - currentCumXP);
-    targetNeedEl.textContent = `必要EXP ${formatComma(need)}`;
-
-    const pct = (targetCum > 0) ? (Math.max(0, Math.min(1, currentCumXP / targetCum)) * 100) : 0;
-    setRingProgress(pct);
-  }
-
-  function promptTargetRank(){
-    const cur = targetRank ? String(targetRank) : "";
-    const input = prompt("目標ランクを入力してください（例: 3000）", cur);
-    if(input == null) return;
-    const v = Number(String(input).replace(/[^\d]/g,""));
-    if(!Number.isFinite(v) || v<=0){
-      targetRank = 0;
-      localStorage.removeItem("targetRank");
-    }else{
-      targetRank = Math.floor(v);
-      localStorage.setItem("targetRank", String(targetRank));
-    }
-    updateTargetUI(currentCumXPGlobal || 0);
-  }
-
   const monthLabel = document.getElementById("monthLabel");
   const gridWrap = document.getElementById("gridWrap");
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
   const monthTotalEl = document.getElementById("monthGain");
-  const cumTotalEl = document.getElementById("cumTotal");
 
   const menuBtn = document.getElementById("menuBtn");
 const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const cumInput = document.getElementById("cumInput");
-
-  targetBtn = document.getElementById("targetBtn");
-  targetLabelEl = document.getElementById("targetLabel");
-  targetNeedEl = document.getElementById("targetNeed");
-    targetRingEl = document.getElementById("targetRing");
-    targetPctEl = document.getElementById("targetPct");
 
   const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
@@ -262,7 +87,7 @@ const entryDialog = document.getElementById("entryDialog");
   // Init
   function syncInlineOnInit(){
     // 初期表示でスクロールが動かないように、フォーカス無しで同期
-    selectedDateEl.textContent = formatJPDate(selected);
+    selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updateRealtime();
   }
@@ -275,10 +100,7 @@ const entryDialog = document.getElementById("entryDialog");
   // ランクテーブル読み込み（読み込み後に再描画して各日付にランクを表示）
   loadRankTable().then(() => {
     renderNoAnim();
-    updateTargetUI(currentCumXPGlobal||0);
   });
-
-  if (targetBtn) targetBtn.addEventListener("click", promptTargetRank);
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
@@ -309,7 +131,7 @@ const entryDialog = document.getElementById("entryDialog");
   }, { passive: true });
 
   // Events
-  if (menuBtn) menuBtn.addEventListener("click", () => menuDialog.showModal());
+  menuBtn.addEventListener("click", () => menuDialog.showModal());
 
   prevBtn.addEventListener("click", () => changeMonth(-1));
   nextBtn.addEventListener("click", () => changeMonth(1));
@@ -423,13 +245,8 @@ const entryDialog = document.getElementById("entryDialog");
 
   gridWrap.appendChild(newGrid);
 
-  // 合計更新（その月の増加合計 / 最新累計）
-  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
-  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-
-  const latestCum = getLatestCumulativeValue(cum);
-  currentCumXPGlobal = latestCum;
-  updateTargetUI(latestCum);
+  // 合計更新（その月の増加合計）
+  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 
   requestAnimationFrame(() => {
     newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
@@ -437,8 +254,7 @@ const entryDialog = document.getElementById("entryDialog");
 
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
-    syncHeaderFont();
-    syncTopLeftFont();
+    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
   });
 
   const cleanup = () => {
@@ -457,18 +273,12 @@ function renderNoAnim() {
   calendarGrid.innerHTML = "";
   fillGrid(calendarGrid, viewDate, deltaMap, cum);
 
-  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
-  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-
-  const latestCum = getLatestCumulativeValue(cum);
-  currentCumXPGlobal = latestCum;
-  updateTargetUI(latestCum);
+  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
-    syncHeaderFont();
-    syncTopLeftFont();
+    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
   });
 }
 
@@ -497,11 +307,11 @@ function renderNoAnim() {
       const cv = cumulativeMap ? cumulativeMap[c.ymd] : null;
       if (rankTableReady && typeof cv === "number") {
         const r = getRankFromXP(cv);
-        rk.textContent = r != null ? String(r) : "";
+        rk.textContent = r != null ? `Lv.${r}` : "";
       } else {
         // 高さ固定のためvisibilityで隠す
         rk.style.visibility = "hidden";
-        rk.textContent = "0";
+        rk.textContent = "Lv.0";
       }
       cell.appendChild(rk);
 
@@ -538,7 +348,7 @@ targetGrid.appendChild(cell);
   // ---- Entry ----
   function openEntry(ymd) {
     selected = ymd;
-    selectedDateEl.textContent = formatJPDate(selected);
+    selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updateRealtime();
     /* モーダルは使わない */
@@ -546,20 +356,9 @@ targetGrid.appendChild(cell);
 }
 
   function updateRealtime() {
-  selectedDateEl.textContent = formatJPDate(selected);
-  const deltaMap = buildDeltaMap(cum);
-
-  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
-  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-
-  const latestCum = getLatestCumulativeValue(cum);
-  currentCumXPGlobal = latestCum;
-  updateTargetUI(latestCum);
-
-  requestAnimationFrame(() => {
-    syncHeaderFont();
-    syncTopLeftFont();
-  });
+    selectedDateEl.textContent = selected;
+    const deltaMap = buildDeltaMap(cum);
+    monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 }
 
 
@@ -604,16 +403,6 @@ targetGrid.appendChild(cell);
     }
     return s;
   }
-
-  function getLatestCumulativeValue(cumulative){
-    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
-    keys.sort();
-    if (!keys.length) return 0;
-    const lastKey = keys[keys.length - 1];
-    const v = cumulative[lastKey];
-    return (typeof v === "number" && Number.isFinite(v)) ? v : 0;
-  }
-
 
   // ---- Calendar cells ----
   function buildCalendarCells(d) {
@@ -678,58 +467,55 @@ targetGrid.appendChild(cell);
     try { inputEl.setSelectionRange(pos, pos); } catch {}
   }
 
-
-
-function syncTopLeftFont(){
-  // 左上（目標/必要EXP）が長い時に、上部のセンター領域と被らないよう縮小
-  const wrap = document.querySelector(".top-left");
-  if(!wrap) return;
-  const btn = document.getElementById("targetBtn");
-  if(!btn) return;
-
-  const maxW = wrap.clientWidth;
-  btn.style.fontSize = ""; // reset
-
-  // ざっくり縮小（12px→9px）
-  let size = 12;
-  while (size >= 9) {
-    btn.style.fontSize = size + "px";
-    // eslint-disable-next-line no-unused-expressions
-    btn.offsetWidth;
-    if (btn.scrollWidth <= maxW) break;
-    size--;
-  }
-}
-function syncHeaderFont(){
-  // 「累計EXP」と「獲得EXP」を同じ文字サイズに固定しつつ、
-  // 1行に収まる範囲で少し小さめにする
-  const base = 16;
-  const min  = 10;
-
-  // monthTotalEl を基準に計算（幅は同じレイアウトなので、同じサイズを適用）
-  const best = calcFitFont(monthTotalEl, base, min, "獲得EXP 9,999,999,999");
-
-  monthTotalEl.style.transform = "";
-  monthTotalEl.style.transformOrigin = "center";
-  monthTotalEl.style.fontSize = best + "px";
-
-  if (cumTotalEl) {
-    cumTotalEl.style.transform = "";
-    cumTotalEl.style.transformOrigin = "center";
-    cumTotalEl.style.fontSize = best + "px";
-  }
-}
-
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
-  const list = scopeEl.querySelectorAll('.exp');
-  if(!list.length) return;
-  list.forEach(el=>{
-    // 自動で全文表示できるようfitTextを使用
-    fitText(el,10,6,"+XXX,XXX,XXX");
+  const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
+  if (!list.length) return;
+
+  // 仕様：各日付の表示は「+XXX,XXX,XXX」が枠内いっぱいになるフォントサイズを基準にし、
+  //      すべてのセルで同じフォントサイズに固定する（列幅は固定のまま）
+  const sample = list[0];
+
+  const basePx = Number(sample.dataset.fitBase || 16);
+  const minPx  = Number(sample.dataset.fitMin || 10);
+  const tpl    = (sample.dataset.fitTemplate || "").trim();
+
+  if (tpl) {
+    // 基準サイズをそのまま使用（自動fit無効）
+    const best = basePx;
+
+    // CSS変数にも載せておく
+    scopeEl.style.setProperty("--expFontPx", best + "px");
+
+    // CSS変数にも載せておく（デバッグ＆保険）
+    scopeEl.style.setProperty("--expFontPx", best + "px");
+
+    list.forEach(el => {
+      el.style.transform = "";
+      el.style.transformOrigin = "center";
+      el.style.fontSize = best + "px";
+
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetWidth;
+
+      // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
+      if (el.scrollWidth > el.clientWidth) {
+        const ratio = el.clientWidth / el.scrollWidth;
+        const scale = Math.max(0.72, Math.min(1, ratio));
+        el.style.transform = `scaleX(${scale})`;
+      }
+    });
+    return;
+  }
+
+  // テンプレが無い場合は従来どおり個別にfit
+  list.forEach(el => {
+    const base = Number(el.dataset.fitBase || 16);
+    const min  = Number(el.dataset.fitMin || 10);
+    const template = (el.dataset.fitTemplate || "").trim();
+    fitText(el, base, min, template || null);
   });
 }
-
 
 function calcFitFont(el, basePx, minPx, templateStr){
   const cs = getComputedStyle(el);
@@ -840,13 +626,7 @@ function fitText(el, basePx, minPx, templateStr){
   }
 }
 
-  function formatJPDate(ymd){
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
-  const [y,m,d] = ymd.split("-");
-  return `${Number(m)}月${Number(d)}日`;
-}
-
-// ---- Utils ----
+  // ---- Utils ----
   function toYMD(date) {
     const y = date.getFullYear();
     const m = pad2(date.getMonth() + 1);
