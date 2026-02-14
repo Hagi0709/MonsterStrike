@@ -1,31 +1,155 @@
-/* ===== 追記: EXP表示（サイズ固定で「XXX,XXX,XXX」が入る） ===== */
+/* モンスト EXPカレンダー - style.css */
+:root{
+  --bg:#ffffff;
+  --text:#111111;
+  --muted:#8a8a8a;
+  --line:rgba(0,0,0,.10);
 
-/* カレンダーセル内の増加量表示（class="exp" を想定） */
-.exp{
-  width:100%;
-  height:26px;                 /* 文字が潰れない高さを固定 */
+  --header:#f3c312;
+  --headerText:#1b1b1b;
+
+  --blue:#1f75ff;
+  --select:#ececec;
+  --today:#f6f6f6;
+
+  --pillBg:#f6f6f6;
+  --pillShadow: 0 10px 30px rgba(0,0,0,.15);
+
+  --fab:#f3c312;
+  --fabShadow: 0 16px 35px rgba(0,0,0,.22);
+
+  --radius: 16px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Top bar */
+.topbar{
+  height: 86px;
+  padding: 16px 14px 12px;
+  background: var(--header);
   display:flex;
-  align-items:center;
+  align-items:flex-end;
+  justify-content:space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.top-title{
+  display:flex;
+  align-items:flex-end;
   justify-content:center;
+  flex: 1;
+  margin: 0 10px;
+}
+.month{
+  font-weight: 900;
+  font-size: 22px;
+  color: var(--headerText);
+  letter-spacing: .02em;
+}
 
-  font-size:11px;              /* 「XXX,XXX,XXX」想定の固定サイズ */
-  font-weight:900;
-  font-variant-numeric: tabular-nums;
-  letter-spacing:-0.2px;
+/* Screen */
+.screen{
+  padding-bottom: 120px;
+}
 
-  white-space:nowrap;          /* 改行禁止（重要） */
+.dow{
+  display:grid;
+  grid-template-columns: repeat(7,1fr);
+  padding: 12px 14px 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dow > div{ text-align:center; }
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 18px 8px;
+  padding: 10px 14px 20px;
+}
+
+/* Day cell */
+.day{
+  min-height: 74px;
+  border-radius: 14px;
+  padding: 10px 6px 8px;
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:center;
+}
+
+/* 日付数字 */
+.day-num{
+  font-size:18px;
+  font-weight:700;
+}
+
+/* ======== ここが今回の本命修正 ======== */
+/* XXX,XXX,XXX が必ず入る固定サイズ表示 */
+.day-exp{
+  width:100%;
+  text-align:center;
+
+  /* 文字サイズ固定（画像2枚目サイズ） */
+  font-size:11px;
+  font-weight:700;
+  color:var(--blue);
+
+  /* はみ出し防止 */
+  white-space:nowrap;
   overflow:hidden;
   text-overflow:clip;
-  line-height:1;
+
+  /* 枠いっぱい表示 */
+  margin-top:4px;
+  line-height:1.1;
+}
+/* ===================================== */
+
+.day:hover{ background: rgba(0,0,0,.03); }
+.day:active{ transform: translateY(1px); }
+
+.day.out{ opacity:.25; }
+.day.today{ background: var(--today); }
+.day.selected{ background: var(--select); }
+
+.total-pill{
+  position: fixed;
+  bottom: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--pillBg);
+  box-shadow: var(--pillShadow);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight:900;
+  color:var(--blue);
+  font-size:22px;
 }
 
-/* セル側の余白が大きいと入らないので横幅を稼ぐ */
-.day, .calendar-day{
-  padding-left:6px !important;
-  padding-right:6px !important;
-}
-
-/* gridの横gapが大きいと列幅が減るので少し詰める（列幅は固定のまま） */
-.grid{
-  column-gap:4px !important;
+.fab{
+  position: fixed;
+  right: 18px;
+  bottom: 70px;
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  border:none;
+  background:var(--fab);
+  box-shadow: var(--fabShadow);
+  font-size:28px;
+  font-weight:900;
 }
