@@ -9,22 +9,19 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="top-left">
-      <button id="targetBtn" class="target-btn" type="button" aria-label="目標ランクを変更">
-        <div id="targetLabel" class="target-label">目標 --</div>
-        <div id="targetNeed" class="target-need">必要EXP --</div>
-        <div class="target-ring-wrap" aria-hidden="true">
-          <svg id="targetRing" class="target-ring" viewBox="0 0 40 40">
-            <circle class="ring-bg" cx="20" cy="20" r="16"></circle>
-            <circle class="ring-bar" cx="20" cy="20" r="16"></circle>
-          </svg>
-          <div id="targetPct" class="target-pct">--%</div>
-        </div>
-      </button>
-    </div>
-
-    <!-- 中央タイトルのセンター維持用スペーサー -->
-    <div class="top-spacer" aria-hidden="true"></div>
+    <button id="targetBtn" class="target-btn" aria-label="目標ランクを変更">
+      <div class="target-lines">
+        <div id="targetLabel" class="target-line">目標 --</div>
+        <div id="targetNeed" class="target-line">必要EXP --</div>
+      </div>
+      <div class="target-ring" aria-hidden="true">
+        <svg class="ring" viewBox="0 0 40 40">
+          <circle class="ring-track" cx="20" cy="20" r="16"></circle>
+          <circle class="ring-bar" cx="20" cy="20" r="16"></circle>
+        </svg>
+        <div id="targetPct" class="ring-text">--%</div>
+      </div>
+    </button>
 
     <div class="top-title">
       <div class="month-cum" id="cumTotal">累計EXP 0</div>
@@ -32,7 +29,7 @@
       <div class="month" id="monthLabel">----</div>
     </div>
 
-    
+    <div class="top-spacer" aria-hidden="true"></div>
   </header>
 
   <main class="screen">
@@ -47,9 +44,10 @@
 
     <section class="entry-inline" aria-label="累計経験値入力">
     <div class="entry-row">
-      <div id="selectedDate" class="entry-label">----</div>
+      <div class="entry-label">日付</div>
+      <div id="selectedDate" class="entry-date">----</div>
     </div>
-<input id="cumInput" class="input" inputmode="numeric" placeholder="入力:累計獲得経験値" />
+<input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
   </section>
   </main>
   <!-- FABは廃止（下の直接入力） -->
