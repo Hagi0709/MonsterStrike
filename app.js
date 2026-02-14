@@ -29,40 +29,72 @@
       for (const row of rows) {
         rankXp.set(Math.floor(row.rank), Math.floor(row.xp));
       }
-
       // ---- 規則性による補完 ----
-      // 1501-2000: (1499->1500) の 3倍 を一定増分として加算
-      // 2001-2500: (1999->2000) の 3倍 を一定増分として加算
-      const xp1499 = rankXp.get(1499);
-      const xp1500 = rankXp.get(1500);
+      // 前提：
+      // - CSVは「左=ランク」「右=累計経験値」
+      // - 1501-2000 は (1499->1500 の差分)×3 を 1ランク必要EXPとして一定
+      // - 2001-2500 は (1999->2000 の差分)×3 を一定
+      // - 2501以降も「500ランク区間ごとに」(区切りランクの直前差分)×3 を一定として継続
+      //
+      // 例：
+      // 2501-3000 : (2499->2500)×3
+      // 3001-3500 : (2999->3000)×3 = (2501-3000 の一定差分)×3
+      // …を繰り返す
 
+      const MAX_RANK = 20000;
+
+      const get = (r) => rankXp.get(r);
+      const set = (r, xp) => rankXp.set(r, Math.floor(xp));
+
+      // 1501-2000
+      const xp1499 = get(1499);
+      const xp1500 = get(1500);
       if (Number.isFinite(xp1499) && Number.isFinite(xp1500)) {
-        const d1500 = xp1500 - xp1499; // 1499->1500 に必要な経験値
-        const step1500 = d1500 * 3;
-
+        const d1500 = xp1500 - xp1499;     // 1499->1500 の必要EXP
+        const step1500 = d1500 * 3;        // 1501-2000 の一定差分
         for (let r = 1501; r <= 2000; r++) {
-          if (!rankXp.has(r)) {
-            rankXp.set(r, xp1500 + (r - 1500) * step1500);
-          }
+          if (!rankXp.has(r)) set(r, xp1500 + (r - 1500) * step1500);
         }
       }
 
       // 2001-2500
-      const xp1999 = rankXp.get(1999);
-      const xp2000 = rankXp.get(2000);
-
+      const xp1999 = get(1999);
+      const xp2000 = get(2000);
       if (Number.isFinite(xp1999) && Number.isFinite(xp2000)) {
-        const d2000 = xp2000 - xp1999; // 1999->2000 に必要な経験値
-        const step2000 = d2000 * 3;
-
-        const MAX_RANK = 20000;
-
-        for (let r = 2001; r <= MAX_RANK; r++) {
-          if (!rankXp.has(r)) {
-            rankXp.set(r, xp2000 + (r - 2000) * step2000);
-          }
+        const d2000 = xp2000 - xp1999;     // 1999->2000 の必要EXP
+        const step2000 = d2000 * 3;        // 2001-2500 の一定差分
+        for (let r = 2001; r <= 2500; r++) {
+          if (!rankXp.has(r)) set(r, xp2000 + (r - 2000) * step2000);
         }
       }
+
+      // 2501以降（500ランク区間ごとに step を3倍）
+      const xp2499 = get(2499);
+      const xp2500 = get(2500);
+      if (Number.isFinite(xp2499) && Number.isFinite(xp2500)) {
+        let baseRank = 2500;
+        let baseXp = xp2500;
+
+        // 2501-3000 の一定差分 = (2499->2500)×3
+        let step = (xp2500 - xp2499) * 3;
+
+        while (baseRank < MAX_RANK) {
+          const blockEnd = Math.min(baseRank + 500, MAX_RANK);
+
+          for (let r = baseRank + 1; r <= blockEnd; r++) {
+            if (!rankXp.has(r)) set(r, baseXp + (r - baseRank) * step);
+          }
+
+          // 次ブロックの基準点を更新
+          baseXp = get(blockEnd);
+          baseRank = blockEnd;
+
+          // 次の500区間は「区切り直前差分×3」なので、stepを3倍
+          step = step * 3;
+        }
+      }
+
+
 
       // rankTable（xp昇順）
       rankTable = Array.from(rankXp.entries())
