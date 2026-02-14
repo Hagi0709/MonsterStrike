@@ -123,7 +123,7 @@ body{
   min-height: 74px;
   border-radius: 14px;
 
-  /* 左右paddingを削って“数字の横幅”を確保（列幅固定のまま見やすく） */
+  /* 左右paddingを削って"数字の横幅"を確保（列幅固定のまま見やすく） */
   padding: 10px 4px 8px;
 
   position: relative;
@@ -132,7 +132,6 @@ body{
 
   /* これが無いと中身の最小幅で列が広がる */
   min-width: 0;
-}0;
 
   /* 日付＋増加量をセル内で安定して配置 */
   display: flex;
@@ -183,7 +182,13 @@ body{
 
   min-width: 0;
   white-space: nowrap;
-  overflow: hidden; /* はみ出しは縮小で解決 */
+
+  /* iOSの端1px欠け対策：超わずかに内側へ */
+  padding: 0 1px;
+  overflow: hidden;
+
+  /* transformで詰めるので描画安定化 */
+  will-change: transform;
 }
 .exp.neg{ color: var(--red); }
 
