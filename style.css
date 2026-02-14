@@ -111,15 +111,21 @@ body{
 
 /* Day cell */
 .day{
-  min-height: 74px;
+  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
+  min-height: 96px;
   border-radius: 14px;
-  padding: 10px 8px 8px;
+  padding: 10px 6px 10px;
   position: relative;
   cursor: pointer;
   background: transparent;
 
   /* これが無いと中身の最小幅で列が広がる */
   min-width: 0;
+
+  /* 日付＋増加量をセル内で安定して配置 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
