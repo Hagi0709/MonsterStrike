@@ -17,9 +17,6 @@
   const monthTotalEl = document.getElementById("monthTotal");
 
   const menuBtn = document.getElementById("menuBtn");
-  const fab = document.getElementById("fab");
-
-  const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const cumInput = document.getElementById("cumInput");
   const previewEl = document.getElementById("preview");
@@ -46,6 +43,7 @@
   const now = new Date();
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   renderNoAnim();
+  syncInline();
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
@@ -86,12 +84,10 @@
     viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
     selected = toYMD(t);
     renderNoAnim();
+    syncInline();
     menuDialog.close();
   });
-
-  // 仕様：日付を選択 → 右下＋で入力
-  fab.addEventListener("click", () => openEntry(selected));
-
+  // 仕様変更：日付を選択 → 下の入力欄で直接入力（FABなし）
   saveBtn.addEventListener("click", () => {
     const n = normalizeNumber(cumInput.value);
     if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
@@ -99,14 +95,12 @@
       delete cum[selected];
       persist();
       showToast("削除しました");
-      entryDialog.close();
       renderNoAnim();
       return;
     }
     cum[selected] = n;
     persist();
     showToast("保存しました");
-    entryDialog.close();
     renderNoAnim();
   });
 
@@ -115,7 +109,6 @@
     delete cum[selected];
     persist();
     showToast("削除しました");
-    entryDialog.close();
     renderNoAnim();
   });
 
@@ -274,9 +267,9 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "10";
+  exp.dataset.fitBase = "18";
   exp.dataset.fitTemplate = "+XXX,XXX,XXX";
-  exp.dataset.fitMin = "6";
+  exp.dataset.fitMin = "10";
 } else {
   exp.style.visibility = "hidden";
   exp.textContent = "0";
@@ -284,7 +277,11 @@ if (typeof d === "number") {
       cell.appendChild(exp);
 
       cell.addEventListener("click", () => {
-        selected = c.ymd;
+        const dt = ymdToDate(c.ymd);
+        if (dt.getMonth() !== viewDate.getMonth() || dt.getFullYear() !== viewDate.getFullYear()) {
+          viewDate = new Date(dt.getFullYear(), dt.getMonth(), 1);
+        }
+        openEntry(c.ymd);
         renderNoAnim();
       });
 
@@ -293,13 +290,19 @@ if (typeof d === "number") {
   }
 
   // ---- Entry ----
+  function syncInline(){
+    selectedDateEl.textContent = selected;
+    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
+    updatePreview();
+  }
+
   function openEntry(ymd) {
+    // 直接入力：選択日を下の入力欄に反映するだけ
     selected = ymd;
     selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updatePreview();
-    entryDialog.showModal();
-    setTimeout(() => cumInput.focus(), 60);
+    focusInlineInput();
   }
 
   function updatePreview() {
@@ -424,78 +427,12 @@ if (typeof d === "number") {
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
   const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
-  if (!list.length) return;
-
-  // 仕様：各日付の表示は「+XXX,XXX,XXX」が枠内いっぱいになるフォントサイズを基準にし、
-  //      すべてのセルで同じフォントサイズに固定する（列幅は固定のまま）
-  const sample = list[0];
-
-  const basePx = Number(sample.dataset.fitBase || 16);
-  const minPx  = Number(sample.dataset.fitMin || 10);
-  const tpl    = (sample.dataset.fitTemplate || "").trim();
-
-  if (tpl) {
-    // 基準サイズをそのまま使用（自動fit無効）
-    const best = basePx;
-
-    // CSS変数にも載せておく
-    scopeEl.style.setProperty("--expFontPx", best + "px");
-
-    // CSS変数にも載せておく（デバッグ＆保険）
-    scopeEl.style.setProperty("--expFontPx", best + "px");
-
-    list.forEach(el => {
-      el.style.transform = "";
-      el.style.transformOrigin = "center";
-      el.style.fontSize = best + "px";
-
-      // eslint-disable-next-line no-unused-expressions
-      el.offsetWidth;
-
-      // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
-      if (el.scrollWidth > el.clientWidth) {
-        const ratio = el.clientWidth / el.scrollWidth;
-        const scale = Math.max(0.72, Math.min(1, ratio));
-        el.style.transform = `scaleX(${scale})`;
-      }
-    });
-    return;
-  }
-
-  // テンプレが無い場合は従来どおり個別にfit
   list.forEach(el => {
-    const base = Number(el.dataset.fitBase || 16);
-    const min  = Number(el.dataset.fitMin || 10);
-    const template = (el.dataset.fitTemplate || "").trim();
-    fitText(el, base, min, template || null);
+    const basePx = Number(el.dataset.fitBase || 16);
+    const minPx  = Number(el.dataset.fitMin || 10);
+    const tpl    = (el.dataset.fitTemplate || "").trim();
+    fitText(el, basePx, minPx, tpl || null);
   });
-}
-
-function calcFitFont(el, basePx, minPx, templateStr){
-  const cs = getComputedStyle(el);
-  const family = cs.fontFamily || "system-ui";
-  const weight = cs.fontWeight || "900";
-
-  const canvas = calcFitFont._c || (calcFitFont._c = document.createElement("canvas"));
-  const ctx = canvas.getContext("2d");
-
-  const measure = (s, size) => {
-    ctx.font = `${weight} ${size}px ${family}`;
-    return ctx.measureText(s).width;
-  };
-
-  // iOS Safariで計測がズレるのを避ける（強制レイアウト）
-  // eslint-disable-next-line no-unused-expressions
-  el.offsetWidth;
-
-  let low = minPx, high = basePx, best = minPx;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const w = measure(templateStr, mid);
-    if (w <= el.clientWidth) { best = mid; low = mid + 1; }
-    else { high = mid - 1; }
-  }
-  return best;
 }
 
 function fitText(el, basePx, minPx, templateStr){
@@ -587,7 +524,11 @@ function fitText(el, basePx, minPx, templateStr){
     const d = pad2(date.getDate());
     return `${y}-${m}-${d}`;
   }
-  function pad2(n){ return String(n).padStart(2, "0"); }
+  function pad2\(n\)\{ return String\(n\)\.padStart\(2, "0"\); \}
+
+  function focusInlineInput(){
+    try { cumInput && cumInput.focus(); } catch {}
+  }
 
   function addMonths(date, delta) {
     const y = date.getFullYear();
@@ -607,11 +548,10 @@ function fitText(el, basePx, minPx, templateStr){
   }
 
   function formatInt(n) { return Number(n).toLocaleString("ja-JP"); }
-function formatSignedInt(n) {
-  // 記号は付けない
-  // 色は .exp / .exp.neg のCSSで制御する
-  return formatInt(Math.abs(n));
-}
+  function formatSignedInt(n) {
+    const sign = n >= 0 ? "+" : "−";
+    return sign + formatInt(Math.abs(n));
+  }
 
   function showToast(msg) {
     toast.textContent = msg;
