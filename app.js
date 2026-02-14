@@ -274,7 +274,7 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "16";
+  exp.dataset.fitBase = "18";
   exp.dataset.fitMin = "4";
 } else {
   exp.style.visibility = "hidden";
@@ -443,36 +443,51 @@ function fitText(el, basePx, minPx){
   // eslint-disable-next-line no-unused-expressions
   el.offsetWidth;
 
-  const fits = (size) => {
+  const minScale = 0.72;
+
+  const applyScaleToFit = () => {
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+    if (el.scrollWidth <= el.clientWidth) return true;
+    const ratio = el.clientWidth / el.scrollWidth;
+    const scale = Math.min(1, ratio);
+    if (scale >= minScale) {
+      el.style.transform = `scaleX(${scale})`;
+      return true;
+    }
+    return false;
+  };
+
+  // ① まず「フォントは大きいまま」scaleXで収める（=枠いっぱいに見える）
+  if (applyScaleToFit()) return;
+
+  // ② scaleXだけでは無理なら、フォントを落として、最後にscaleXで仕上げる
+  const fitsAt = (size) => {
+    el.style.transform = "";
     el.style.fontSize = size + "px";
     // eslint-disable-next-line no-unused-expressions
     el.offsetWidth;
-    return el.scrollWidth <= el.clientWidth;
+
+    if (el.scrollWidth <= el.clientWidth) return true;
+
+    const ratio = el.clientWidth / el.scrollWidth;
+    return ratio >= minScale;
   };
 
-  // 二分探索で「収まる最大フォント」を探す
   let low = minPx, high = basePx, best = minPx;
-
-  if (fits(high)) {
-    best = high;
-  } else {
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      if (fits(mid)) { best = mid; low = mid + 1; }
-      else { high = mid - 1; }
-    }
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (fitsAt(mid)) { best = mid; low = mid + 1; }
+    else { high = mid - 1; }
   }
 
   el.style.fontSize = best + "px";
+  el.style.transform = "";
   // eslint-disable-next-line no-unused-expressions
   el.offsetWidth;
 
-  // それでも収まらない場合は scaleX で最後に押し込む（列幅固定のまま）
-  if (el.scrollWidth > el.clientWidth) {
-    const ratio = el.clientWidth / el.scrollWidth;
-    const scale = Math.max(0.72, Math.min(1, ratio));
-    el.style.transform = `scaleX(${scale})`;
-  }
+  // 仕上げにscaleX（足りない分だけ）
+  applyScaleToFit();
 }
 
   // ---- Utils ----
