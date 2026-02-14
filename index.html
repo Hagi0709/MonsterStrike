@@ -13,6 +13,7 @@
     <div class="top-spacer" aria-hidden="true"></div>
 
     <div class="top-title">
+      <div class="month-gain" id="monthGain">総獲得EXP 0</div>
       <div class="month" id="monthLabel">----</div>
     </div>
 
@@ -31,16 +32,9 @@
       <div id="calendarGrid" class="grid grid-current"></div>
     </div>
   </main>
-
-  <!-- bottom total pill -->
-  <div class="total-wrap" aria-hidden="false">
-    <div class="total-pill">
-      <span class="yen">EXP</span>
-      <span id="monthTotal" class="total-num">0</span>
-    </div>
-  </div>
   <!-- FABは廃止（下の直接入力） -->
-  <!-- 下のスペースで直接入力（モーダル無し） -->
+<!-- 下のスペースで直接入力（モーダル無し） -->
+  
   <section class="entry-inline" aria-label="累計経験値入力">
     <div class="entry-row">
       <div class="entry-label">日付</div>
@@ -49,17 +43,6 @@
 
     <label class="label" for="cumInput">その日の時点での累計経験値</label>
     <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
-    <div class="help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
-
-    <div class="row mini">
-      <div class="label">計算プレビュー</div>
-      <div id="preview" class="preview">--</div>
-    </div>
-
-    <div class="dialog-actions entry-actions">
-      <button id="deleteBtn" class="btn danger" value="noop" type="button">削除</button>
-      <button id="saveBtn" class="btn primary" value="noop" type="button">保存</button>
-    </div>
   </section>
 
   <!-- 互換用：JSが参照しても落ちない空dialog（使わない） -->
