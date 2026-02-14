@@ -93,14 +93,22 @@ const entryDialog = document.getElementById("entryDialog");
     menuDialog.close();
   });
   // 仕様変更：保存/削除ボタンは廃止。入力と同時に自動反映・自動保存。
-    showToast("削除しました");
-    renderNoAnim();
-  });
 
   // 入力しながら3桁カンマ
   cumInput.addEventListener("input", () => {
+    const caret = cumInput.selectionStart ?? 0;
     formatNumberInput(cumInput);
-    updateRealtime();
+
+    const n = normalizeNumber(cumInput.value);
+    if (n === null) return;
+
+    if (n === 0) delete cum[selected];
+    else cum[selected] = n;
+
+    persist();
+    renderNoAnim();
+
+    try { cumInput.setSelectionRange(caret, caret); } catch {}
   });
 
   exportBtn.addEventListener("click", () => {
@@ -282,11 +290,7 @@ targetGrid.appendChild(cell);
 }
 
   function updateRealtime() {
-    // 選択日の入力値に合わせて、下側UIを最小限同期
-    const n = normalizeNumber(cumInput.value);
-    if (n === null) return;
-
-    // 月表示上の「総獲得EXP」更新
+    selectedDateEl.textContent = selected;
     const deltaMap = buildDeltaMap(cum);
     monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 }
