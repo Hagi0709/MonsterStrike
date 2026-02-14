@@ -14,15 +14,60 @@
       const res = await fetch("rank_table.csv", { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const text = await res.text();
-      rankTable = text
+      rankTable = [];
+      const rows = text
         .trim()
         .split(/\r?\n/)
         .map(line => {
           const [r, x] = line.split(",");
           return { rank: Number(r), xp: Number(x) };
         })
+        .filter(v => Number.isFinite(v.rank) && Number.isFinite(v.xp));
+
+      // rank -> xp（累計）に正規化
+      const rankXp = new Map();
+      for (const row of rows) {
+        rankXp.set(Math.floor(row.rank), Math.floor(row.xp));
+      }
+
+      // ---- 規則性による補完 ----
+      // 1501-2000: (1499->1500) の 3倍 を一定増分として加算
+      // 2001-2500: (1999->2000) の 3倍 を一定増分として加算
+      const xp1499 = rankXp.get(1499);
+      const xp1500 = rankXp.get(1500);
+
+      if (Number.isFinite(xp1499) && Number.isFinite(xp1500)) {
+        const d1500 = xp1500 - xp1499; // 1499->1500 に必要な経験値
+        const step1500 = d1500 * 3;
+
+        for (let r = 1501; r <= 2000; r++) {
+          if (!rankXp.has(r)) {
+            rankXp.set(r, xp1500 + (r - 1500) * step1500);
+          }
+        }
+      }
+
+      // 2001-2500
+      const xp1999 = rankXp.get(1999);
+      const xp2000 = rankXp.get(2000);
+
+      if (Number.isFinite(xp1999) && Number.isFinite(xp2000)) {
+        const d2000 = xp2000 - xp1999; // 1999->2000 に必要な経験値
+        const step2000 = d2000 * 3;
+
+        for (let r = 2001; r <= 2500; r++) {
+          if (!rankXp.has(r)) {
+            rankXp.set(r, xp2000 + (r - 2000) * step2000);
+          }
+        }
+      }
+
+      // rankTable（xp昇順）
+      rankTable = Array.from(rankXp.entries())
+        .map(([rank, xp]) => ({ rank, xp }))
         .filter(v => Number.isFinite(v.rank) && Number.isFinite(v.xp))
-        .sort((a,b) => a.xp - b.xp);
+        .sort((a, b) => a.xp - b.xp);
+
       rankTableReady = rankTable.length > 0;
     } catch (e) {
       console.error("rank_table.csv 読み込み失敗", e);
@@ -257,7 +302,7 @@ const entryDialog = document.getElementById("entryDialog");
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
     fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
-    if (cumTotalEl) fitText(cumTotalEl, 14, 10, "累計EXP 9,999,999,999");
+    if (cumTotalEl) fitText(cumTotalEl, 18, 12, "累計EXP 9,999,999,999");
   });
 
   const cleanup = () => {
@@ -283,7 +328,7 @@ function renderNoAnim() {
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
     fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
-    if (cumTotalEl) fitText(cumTotalEl, 14, 10, "累計EXP 9,999,999,999");
+    if (cumTotalEl) fitText(cumTotalEl, 18, 12, "累計EXP 9,999,999,999");
   });
 }
 
@@ -485,51 +530,13 @@ targetGrid.appendChild(cell);
 
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
-  const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
+  // 仕様：増加量の文字サイズは 8px に固定（縮小・scaleXはしない）
+  const list = scopeEl.querySelectorAll('.exp');
   if (!list.length) return;
-
-  // 仕様：各日付の表示は「+XXX,XXX,XXX」が枠内いっぱいになるフォントサイズを基準にし、
-  //      すべてのセルで同じフォントサイズに固定する（列幅は固定のまま）
-  const sample = list[0];
-
-  const basePx = Number(sample.dataset.fitBase || 16);
-  const minPx  = Number(sample.dataset.fitMin || 10);
-  const tpl    = (sample.dataset.fitTemplate || "").trim();
-
-  if (tpl) {
-    // 基準サイズをそのまま使用（自動fit無効）
-    const best = basePx;
-
-    // CSS変数にも載せておく
-    scopeEl.style.setProperty("--expFontPx", best + "px");
-
-    // CSS変数にも載せておく（デバッグ＆保険）
-    scopeEl.style.setProperty("--expFontPx", best + "px");
-
-    list.forEach(el => {
-      el.style.transform = "";
-      el.style.transformOrigin = "center";
-      el.style.fontSize = best + "px";
-
-      // eslint-disable-next-line no-unused-expressions
-      el.offsetWidth;
-
-      // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
-      if (el.scrollWidth > el.clientWidth) {
-        const ratio = el.clientWidth / el.scrollWidth;
-        const scale = Math.max(0.72, Math.min(1, ratio));
-        el.style.transform = `scaleX(${scale})`;
-      }
-    });
-    return;
-  }
-
-  // テンプレが無い場合は従来どおり個別にfit
   list.forEach(el => {
-    const base = Number(el.dataset.fitBase || 16);
-    const min  = Number(el.dataset.fitMin || 10);
-    const template = (el.dataset.fitTemplate || "").trim();
-    fitText(el, base, min, template || null);
+    el.style.transform = "";
+    el.style.transformOrigin = "center";
+    el.style.fontSize = "8px";
   });
 }
 
