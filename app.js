@@ -14,15 +14,12 @@
   const monthLabel = document.getElementById("monthLabel");
   const gridWrap = document.getElementById("gridWrap");
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
-  const monthTotalEl = document.getElementById("monthTotal");
+  const monthTotalEl = document.getElementById("monthGain");
 
   const menuBtn = document.getElementById("menuBtn");
 const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const cumInput = document.getElementById("cumInput");
-  const previewEl = document.getElementById("preview");
-  const saveBtn = document.getElementById("saveBtn");
-  const deleteBtn = document.getElementById("deleteBtn");
 
   const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
@@ -45,7 +42,7 @@ const entryDialog = document.getElementById("entryDialog");
     // 初期表示でスクロールが動かないように、フォーカス無しで同期
     selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
-    updatePreview();
+    updateRealtime();
   }
 
   const now = new Date();
@@ -95,27 +92,7 @@ const entryDialog = document.getElementById("entryDialog");
     syncInlineOnInit();
     menuDialog.close();
   });
-  // 仕様変更：右下＋は使わず、下の入力欄で直接入力
-saveBtn.addEventListener("click", () => {
-    const n = normalizeNumber(cumInput.value);
-    if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
-    if (n === 0) {
-      delete cum[selected];
-      persist();
-      showToast("削除しました");
-      renderNoAnim();
-      return;
-    }
-    cum[selected] = n;
-    persist();
-    showToast("保存しました");
-    renderNoAnim();
-  });
-
-  deleteBtn.addEventListener("click", () => {
-    if (cum[selected] == null) { showToast("この日は記録なし"); return; }
-    delete cum[selected];
-    persist();
+  // 仕様変更：保存/削除ボタンは廃止。入力と同時に自動反映・自動保存。
     showToast("削除しました");
     renderNoAnim();
   });
@@ -123,7 +100,7 @@ saveBtn.addEventListener("click", () => {
   // 入力しながら3桁カンマ
   cumInput.addEventListener("input", () => {
     formatNumberInput(cumInput);
-    updatePreview();
+    updateRealtime();
   });
 
   exportBtn.addEventListener("click", () => {
@@ -209,7 +186,7 @@ saveBtn.addEventListener("click", () => {
   gridWrap.appendChild(newGrid);
 
   // 合計更新（その月の増加合計）
-  monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 
   requestAnimationFrame(() => {
     newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
@@ -217,7 +194,7 @@ saveBtn.addEventListener("click", () => {
 
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
-    fitText(monthTotalEl, 22, 12);
+    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
   });
 
   const cleanup = () => {
@@ -236,12 +213,12 @@ function renderNoAnim() {
   calendarGrid.innerHTML = "";
   fillGrid(calendarGrid, viewDate, deltaMap);
 
-  monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
+  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
-    fitText(monthTotalEl, 22, 12);
+    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
   });
 }
 
@@ -275,7 +252,7 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "8";
+  exp.dataset.fitBase = "10";
   exp.dataset.fitTemplate = "+XXX,XXX,XXX";
   exp.dataset.fitMin = "6";
 } else {
@@ -299,24 +276,21 @@ targetGrid.appendChild(cell);
     selected = ymd;
     selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
-    updatePreview();
+    updateRealtime();
     /* モーダルは使わない */
     setTimeout(() => cumInput.focus(), 60);
 }
 
-  function updatePreview() {
+  function updateRealtime() {
+    // 選択日の入力値に合わせて、下側UIを最小限同期
     const n = normalizeNumber(cumInput.value);
-    if (n === null) { previewEl.textContent = "--"; return; }
-    if (n === 0) { previewEl.textContent = "削除"; return; }
+    if (n === null) return;
 
-    const prev = findPrevCumulative(selected, cum);
-    if (!prev) { previewEl.textContent = "前回記録なし（増加量は表示されません）"; return; }
+    // 月表示上の「総獲得EXP」更新
+    const deltaMap = buildDeltaMap(cum);
+    monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+}
 
-    const diff = n - prev.value;
-    const sign = diff >= 0 ? "+" : "−";
-    const cls = diff >= 0 ? "plus" : "neg";
-    previewEl.innerHTML = `前回(${prev.date})との差：<span class="${cls}">${sign}${formatInt(Math.abs(diff))}</span>`;
-  }
 
   // ---- Data to delta ----
   function buildDeltaMap(cumulative) {
