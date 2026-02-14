@@ -79,8 +79,9 @@ body{
 .screen{
   /* 横余白を完全解放 */
   padding: 0;
-  padding-bottom: 120px;
+  padding-bottom: 10px;
 }
+
 
 .dow{
   display:grid;
@@ -95,6 +96,14 @@ body{
 .dow > div{ text-align:center; }
 
 /* スライド用枠 */
+
+/* gridのabsolute基準（これが無いとカレンダーが途中から/崩れて見える） */
+.grid-wrap{
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+}
+
 .grid{
   position: absolute;
 
@@ -154,9 +163,10 @@ body{
 .day:active{ transform: translateY(1px); }
 
 .day.out{
-  opacity: .25;
+  visibility: hidden;
   pointer-events: none;
 }
+
 
 .day.selected{ background: var(--select); }
 .day.today:not(.selected){ background: var(--today); }
@@ -200,6 +210,33 @@ body{
 }
 .exp.neg{ color: var(--red); }
 
+
+/* 下のスペースで直接入力（モーダル無し） */
+.entry-inline{
+  padding: 14px 14px 140px; /* 下の合計ピルに隠れない余白 */
+}
+.entry-row{
+  display:flex;
+  align-items:baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.entry-label{
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 14px;
+  min-width: 44px;
+}
+.entry-date{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.entry-actions{
+  display:flex;
+  gap: 10px;
+  padding-top: 10px;
+}
+
 /* Bottom total pill */
 .total-wrap{
   position: fixed;
@@ -235,24 +272,8 @@ body{
   overflow: hidden;
 }
 
-/* FAB */
-.fab{
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  width: 62px;
-  height: 62px;
-  border-radius: 999px;
-  border: none;
-  background: var(--fab);
-  color: rgba(0,0,0,.55);
-  font-size: 34px;
-  font-weight: 900;
-  box-shadow: var(--fabShadow);
-  cursor:pointer;
-  z-index: 10;
-}
-.fab:active{ transform: translateY(1px); }
+/* FAB（右下＋）は使わない：下の直接入力へ */
+.fab{ display:none; }
 
 /* Dialogs */
 .dialog{
