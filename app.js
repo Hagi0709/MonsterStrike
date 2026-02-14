@@ -275,7 +275,8 @@ if (typeof d === "number") {
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
   exp.dataset.fitBase = "18";
-  exp.dataset.fitMin = "4";
+  exp.dataset.fitTemplate = "+XXX,XXX,XXX";
+  exp.dataset.fitMin = "10";
 } else {
   exp.style.visibility = "hidden";
   exp.textContent = "0";
@@ -425,13 +426,14 @@ function applyFits(scopeEl){
   const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
   list.forEach(el => {
     const basePx = Number(el.dataset.fitBase || 16);
-    const minPx  = Number(el.dataset.fitMin || 4);
-    fitText(el, basePx, minPx);
+    const minPx  = Number(el.dataset.fitMin || 10);
+    const tpl    = (el.dataset.fitTemplate || "").trim();
+    fitText(el, basePx, minPx, tpl || null);
   });
 }
 
-function fitText(el, basePx, minPx){
-  // リセット（前回のscaleを消す）
+function fitText(el, basePx, minPx, templateStr){
+  // リセット
   el.style.transform = "";
   el.style.transformOrigin = "center";
   el.style.fontSize = basePx + "px";
@@ -443,51 +445,73 @@ function fitText(el, basePx, minPx){
   // eslint-disable-next-line no-unused-expressions
   el.offsetWidth;
 
-  const minScale = 0.72;
+  // テンプレ（例: +XXX,XXX,XXX）が指定されている場合は
+  // まずテンプレが「1枠に収まる最大フォント」を基準にする
+  const tpl = (templateStr && String(templateStr).trim()) ? String(templateStr).trim() : null;
 
-  const applyScaleToFit = () => {
+  if (tpl) {
+    const cs = getComputedStyle(el);
+    const family = cs.fontFamily || "system-ui";
+    const weight = cs.fontWeight || "900";
+
+    const canvas = fitText._c || (fitText._c = document.createElement("canvas"));
+    const ctx = canvas.getContext("2d");
+
+    const measure = (s, size) => {
+      ctx.font = `${weight} ${size}px ${family}`;
+      return ctx.measureText(s).width;
+    };
+
+    let low = minPx, high = basePx, best = minPx;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const w = measure(tpl, mid);
+      if (w <= el.clientWidth) { best = mid; low = mid + 1; }
+      else { high = mid - 1; }
+    }
+
+    el.style.fontSize = best + "px";
     // eslint-disable-next-line no-unused-expressions
     el.offsetWidth;
-    if (el.scrollWidth <= el.clientWidth) return true;
-    const ratio = el.clientWidth / el.scrollWidth;
-    const scale = Math.min(1, ratio);
-    if (scale >= minScale) {
+
+    // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
+    if (el.scrollWidth > el.clientWidth) {
+      const ratio = el.clientWidth / el.scrollWidth;
+      const scale = Math.max(0.72, Math.min(1, ratio));
       el.style.transform = `scaleX(${scale})`;
-      return true;
     }
-    return false;
-  };
+    return;
+  }
 
-  // ① まず「フォントは大きいまま」scaleXで収める（=枠いっぱいに見える）
-  if (applyScaleToFit()) return;
-
-  // ② scaleXだけでは無理なら、フォントを落として、最後にscaleXで仕上げる
-  const fitsAt = (size) => {
-    el.style.transform = "";
+  // --- テンプレ無し（従来動作） ---
+  const fits = (size) => {
     el.style.fontSize = size + "px";
     // eslint-disable-next-line no-unused-expressions
     el.offsetWidth;
-
-    if (el.scrollWidth <= el.clientWidth) return true;
-
-    const ratio = el.clientWidth / el.scrollWidth;
-    return ratio >= minScale;
+    return el.scrollWidth <= el.clientWidth;
   };
 
   let low = minPx, high = basePx, best = minPx;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    if (fitsAt(mid)) { best = mid; low = mid + 1; }
-    else { high = mid - 1; }
+
+  if (fits(high)) {
+    best = high;
+  } else {
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      if (fits(mid)) { best = mid; low = mid + 1; }
+      else { high = mid - 1; }
+    }
   }
 
   el.style.fontSize = best + "px";
-  el.style.transform = "";
   // eslint-disable-next-line no-unused-expressions
   el.offsetWidth;
 
-  // 仕上げにscaleX（足りない分だけ）
-  applyScaleToFit();
+  if (el.scrollWidth > el.clientWidth) {
+    const ratio = el.clientWidth / el.scrollWidth;
+    const scale = Math.max(0.72, Math.min(1, ratio));
+    el.style.transform = `scaleX(${scale})`;
+  }
 }
 
   // ---- Utils ----
