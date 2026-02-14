@@ -11,6 +11,8 @@
   --red:#ff3b30;
   --orange:#ff9500;
 
+  --rank:#9ACD32;
+
   --select:#ececec;
   --today:#f6f6f6;
 
@@ -67,6 +69,15 @@ body{
   text-align: center;
   font-weight: 900;
   font-size: 16px;
+  color: var(--headerText);
+  opacity: .92;
+  letter-spacing: .02em;
+}
+
+.month-cum{
+  text-align: center;
+  font-weight: 900;
+  font-size: 13px;
   color: var(--headerText);
   opacity: .92;
   letter-spacing: .02em;
@@ -213,7 +224,7 @@ body{
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--rank);
   white-space: nowrap;
   min-width: 0;
 }
