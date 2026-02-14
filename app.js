@@ -128,7 +128,7 @@
   exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
-      version: 4,
+      version: 5,
       exportedAt: new Date().toISOString(),
       cumulative: cum
     };
@@ -216,10 +216,9 @@
       calendarGrid = newGrid;
       animating = false;
     };
-
     newGrid.addEventListener("transitionend", cleanup, { once: true });
 
-    // 合計更新
+    // 合計更新（その月の増加合計）
     monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
     fitText(monthTotalEl, 22, 14);
   }
@@ -246,8 +245,8 @@
       cell.className = "day";
 
       if (c.out) cell.classList.add("out");
-      if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.dow === 0) cell.classList.add("sun");
+      if (c.ymd === todayYMD) cell.classList.add("today");
       if (c.ymd === selected) cell.classList.add("selected");
 
       const dn = document.createElement("div");
@@ -262,7 +261,7 @@
       if (typeof d === "number") {
         if (d < 0) exp.classList.add("neg");
         exp.textContent = formatSignedInt(d);
-        fitText(exp, 16, 6); // 自動縮小
+        fitText(exp, 16, 6); // 収まるまで縮小
       } else {
         exp.style.visibility = "hidden";
         exp.textContent = "0";
@@ -421,9 +420,9 @@
     size = Math.max(minPx, size);
     el.style.fontSize = size + "px";
 
-    // 実測で「必ず収まるまで」落とす
+    // 実測で「必ず収まるまで」落とす（列幅は固定のまま）
     let guard = 0;
-    while (guard < 28 && el.scrollWidth > el.clientWidth && size > minPx){
+    while (guard < 32 && el.scrollWidth > el.clientWidth && size > minPx){
       size -= 1;
       el.style.fontSize = size + "px";
       guard++;
