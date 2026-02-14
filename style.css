@@ -1,5 +1,7 @@
   /* モンスト EXPカレンダー - style.css */
   :root{
+    --topLeftMax: 42vw;
+    --topCenterMax: 58vw;
     --bg:#ffffff;
     --text:#111111;
     --muted:#8a8a8a;
@@ -48,15 +50,18 @@
   background: var(--header);
 
   display: grid;
-  grid-template-columns: 1fr auto 1fr; /* left / center / right */
-  align-items: flex-end;
+  grid-template-columns: 1fr 1fr 1fr; /* left / center / right (center fixed) */;
 }
   .top-spacer{
+  grid-column: 3;
   justify-self: end;
   width: 44px;
   height: 44px;
 }
   .top-title{
+  max-width: var(--topCenterMax);
+  overflow: hidden;
+  grid-column: 2;
   justify-self: center;
   display:flex;
   flex-direction: column;
@@ -459,6 +464,8 @@
 
   /* 1画面に収める（カレンダー＋入力欄） */
   :root{
+    --topLeftMax: 42vw;
+    --topCenterMax: 58vw;
     --topbarH: 86px;
     --dowH: 44px;
     --entryH: 140px;
@@ -491,10 +498,11 @@
 
 /* 目標ランク（左上） */
 .top-left{
+  grid-column: 1;
   justify-self: start;
   align-self: flex-start;
   margin-top: 2px;
-  max-width: 38vw;
+  max-width: var(--topLeftMax);
   display:flex;
   align-items:flex-start;
 }
@@ -531,7 +539,7 @@
 
 /* Today: orange outline only / Selected: filled background */
 .day.today{
-  outline: 2px solid var(--orange);
+  outline: 2px solid rgba(255,149,0,.55);
   outline-offset: -2px;
   background: transparent;
 }
