@@ -435,7 +435,9 @@ function applyFits(scopeEl){
   const tpl    = (sample.dataset.fitTemplate || "").trim();
 
   if (tpl) {
-    const best = calcFitFont(sample, basePx, minPx, tpl);
+    // iOS Safariは「ギリギリ収まる」判定でも右端が1px欠けることがあるので安全マージンを入れる
+    const bestRaw = calcFitFont(sample, basePx, minPx, tpl);
+    const best = Math.max(minPx, bestRaw - 1);
 
     // CSS変数にも載せておく（デバッグ＆保険）
     scopeEl.style.setProperty("--expFontPx", best + "px");
