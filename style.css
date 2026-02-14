@@ -147,12 +147,13 @@ body{
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  margin-top: 8px;
+  margin-top: 6px;
   width: 100%;
   text-align:center;
-  font-weight: 800;
+  font-weight: 900;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .01em;
+  letter-spacing: 0;
   color: var(--blue);
 
   min-width: 0;
