@@ -3,12 +3,14 @@
   --bg:#ffffff;
   --text:#111111;
   --muted:#8a8a8a;
-  --line:rgba(0,0,0,.10);
 
   --header:#f3c312;
   --headerText:#1b1b1b;
 
   --blue:#1f75ff;
+  --red:#ff3b30;
+  --orange:#ff9500;
+
   --select:#ececec;
   --today:#f6f6f6;
 
@@ -17,8 +19,6 @@
 
   --fab:#f3c312;
   --fabShadow: 0 16px 35px rgba(0,0,0,.22);
-
-  --radius: 16px;
 }
 
 *{box-sizing:border-box}
@@ -28,6 +28,7 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
 }
 
 /* Top bar */
@@ -42,6 +43,7 @@ body{
   top: 0;
   z-index: 10;
 }
+.top-spacer{ width:44px; height:44px; }
 .top-title{
   display:flex;
   align-items:flex-end;
@@ -55,101 +57,314 @@ body{
   color: var(--headerText);
   letter-spacing: .02em;
 }
+.top-icon{
+  appearance:none;
+  border:none;
+  background: transparent;
+  width: 44px;
+  height: 44px;
+  display:grid;
+  place-items:center;
+  border-radius: 12px;
+  cursor:pointer;
+}
+.top-icon:active{transform: translateY(1px)}
+.icon{
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(0,0,0,.45);
+}
 
 /* Screen */
-.screen{
-  padding-bottom: 120px;
-}
+.screen{ padding-bottom: 120px; }
 
 .dow{
   display:grid;
-  grid-template-columns: repeat(7,1fr);
+  grid-template-columns: repeat(7,minmax(0,1fr));
   padding: 12px 14px 8px;
   color: var(--muted);
   font-size: 14px;
 }
 .dow > div{ text-align:center; }
 
-.grid{
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 18px 8px;
-  padding: 10px 14px 20px;
+/* スライド用枠 */
+.grid-wrap{
+  position: relative;
+  overflow: hidden;
+
+  /* 7列の「1列あたり横幅」を稼ぐ（枠いっぱいに寄せる） */
+  padding: 8px 8px 20px;
+
+  min-height: 420px;
 }
+.grid{
+  position: absolute;
+
+  /* 左右の余白を削って列幅を広げる */
+  inset: 8px 8px 20px 8px;
+
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
+
+  /* 横gapを小さくして、さらに列幅を稼ぐ */
+  gap: 18px 4px;
+
+  will-change: transform, opacity;
+}
+.grid-current{ opacity: 1; transform: translateX(0); }
+.grid-enter-right{ opacity: 0; transform: translateX(18%); }
+.grid-enter-left{ opacity: 0; transform: translateX(-18%); }
+.grid-exit-right{ opacity: 0; transform: translateX(18%); }
+.grid-exit-left{ opacity: 0; transform: translateX(-18%); }
+.grid-anim{ transition: transform 220ms ease, opacity 220ms ease; }
 
 /* Day cell */
 .day{
-  min-height: 74px;
+  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
+  min-height: 96px;
   border-radius: 14px;
-  padding: 10px 6px 8px;
+  padding: 10px 6px 10px;
   position: relative;
   cursor: pointer;
   background: transparent;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-start;
-  align-items:center;
+
+  /* これが無いと中身の最小幅で列が広がる */
+  min-width: 0;
+
+  /* 日付＋増加量をセル内で安定して配置 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-
-/* 日付数字 */
-.day-num{
-  font-size:18px;
-  font-weight:700;
-}
-
-/* ======== ここが今回の本命修正 ======== */
-/* XXX,XXX,XXX が必ず入る固定サイズ表示 */
-.day-exp{
-  width:100%;
-  text-align:center;
-
-  /* 文字サイズ固定（画像2枚目サイズ） */
-  font-size:11px;
-  font-weight:700;
-  color:var(--blue);
-
-  /* はみ出し防止 */
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:clip;
-
-  /* 枠いっぱい表示 */
-  margin-top:4px;
-  line-height:1.1;
-}
-/* ===================================== */
-
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
 
-.day.out{ opacity:.25; }
-.day.today{ background: var(--today); }
-.day.selected{ background: var(--select); }
-
-.total-pill{
-  position: fixed;
-  bottom: 78px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--pillBg);
-  box-shadow: var(--pillShadow);
-  border-radius: 999px;
-  padding: 10px 20px;
-  font-weight:900;
-  color:var(--blue);
-  font-size:22px;
+.day.out{
+  opacity: .25;
+  pointer-events: none;
 }
 
+.day.selected{ background: var(--select); }
+.day.today:not(.selected){ background: var(--today); }
+
+/* 日曜日は赤（今日オレンジ優先） */
+.day.sun .dnum{ color: var(--red); }
+.day.today .dnum{ color: var(--orange); }
+
+/* 日付：小さく、細く */
+.dnum{
+  font-size: 18px;
+  font-weight: 600;
+  text-align:center;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 増加量：1行で必ず収める（JSでフォント縮小） */
+.exp{
+  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
+  width: 100%;
+  height: 36px;
+  margin-top: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--blue);
+
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden; /* はみ出しは縮小で解決 */
+}
+.exp.neg{ color: var(--red); }
+
+/* Bottom total pill */
+.total-wrap{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+  z-index: 9;
+}
+.total-pill{
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  background: var(--pillBg);
+  box-shadow: var(--pillShadow);
+}
+.yen{
+  font-weight: 900;
+  color: var(--blue);
+  opacity: .9;
+}
+.total-num{
+  font-weight: 900;
+  color: var(--blue);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* FAB */
 .fab{
   position: fixed;
   right: 18px;
-  bottom: 70px;
-  width:64px;
-  height:64px;
-  border-radius:50%;
-  border:none;
-  background:var(--fab);
+  bottom: 18px;
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: none;
+  background: var(--fab);
+  color: rgba(0,0,0,.55);
+  font-size: 34px;
+  font-weight: 900;
   box-shadow: var(--fabShadow);
-  font-size:28px;
-  font-weight:900;
+  cursor:pointer;
+  z-index: 10;
 }
+.fab:active{ transform: translateY(1px); }
+
+/* Dialogs */
+.dialog{
+  border: none;
+  padding: 0;
+  width: min(520px, calc(100vw - 24px));
+  border-radius: 18px;
+}
+.dialog::backdrop{ background: rgba(0,0,0,.25); }
+
+.dialog-card{ padding: 14px; background: #fff; }
+
+.dialog-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 10px;
+}
+.dialog-title{ font-size: 16px; font-weight: 900; }
+.dialog-close{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(0,0,0,.06);
+  font-size: 20px;
+  cursor:pointer;
+}
+
+.dialog-body{ padding: 6px 2px 10px; }
+.row{ margin-bottom: 12px; }
+.row.mini{ margin-top: 6px; margin-bottom: 6px; }
+.label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.value{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.preview{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.preview .plus{ color: var(--blue); }
+.preview .neg{ color: var(--red); }
+
+.input{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.12);
+  font-size: 16px;
+  outline:none;
+}
+.input:focus{
+  border-color: rgba(31,117,255,.45);
+  box-shadow: 0 0 0 3px rgba(31,117,255,.12);
+}
+
+.help{
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dialog-actions{
+  display:flex;
+  gap: 10px;
+  padding-top: 4px;
+}
+.btn{
+  flex: 1;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 12px;
+  font-weight: 900;
+  cursor:pointer;
+}
+.btn.primary{
+  background: rgba(31,117,255,.12);
+  color: #0a2f7a;
+}
+.btn.danger{
+  background: rgba(255,0,0,.08);
+  color: #7a1111;
+}
+
+/* Menu */
+.menu .menu-btn{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(0,0,0,.03);
+  font-weight: 800;
+  cursor:pointer;
+}
+.menu .menu-btn:active{transform: translateY(1px)}
+.menu .menu-row{
+  display:flex;
+  gap:10px;
+  margin-top: 10px;
+}
+.menu .menu-row .menu-btn{flex:1}
+.menu .menu-btn.danger{
+  background: rgba(255,0,0,.08);
+  border-color: rgba(255,0,0,.15);
+}
+.file-btn input{display:none}
+.sep{
+  height: 1px;
+  background: rgba(0,0,0,.10);
+  margin: 12px 0;
+}
+.tiny{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Toast */
+.toast{
+  border:none;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.82);
+  color: #fff;
+}
+.toast::backdrop{background: transparent}
