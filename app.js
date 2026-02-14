@@ -2,6 +2,7 @@
 (() => {
   const STORAGE_KEY = "monst_cumxp_v2";
 
+
   /** @type {Record<string, number>} 累計経験値 */
   let cum = load();
 
