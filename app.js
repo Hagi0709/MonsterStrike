@@ -409,7 +409,6 @@
 
   // ---- Fit text (shrink font; keep columns fixed) ----
   function fitText(el, basePx, minPx){
-    // まずベース適用
     let size = basePx;
     el.style.fontSize = size + "px";
 
@@ -422,15 +421,13 @@
     size = Math.max(minPx, size);
     el.style.fontSize = size + "px";
 
-    // 実測で「必ず収まるまで」落とす（列幅は固定のまま）
-    // 上限を少し大きめにして、+47,117,737,663 でも1行表示を狙う
+    // 実測で「必ず収まるまで」落とす
     let guard = 0;
     while (guard < 28 && el.scrollWidth > el.clientWidth && size > minPx){
       size -= 1;
       el.style.fontSize = size + "px";
       guard++;
     }
-  }
   }
 
   // ---- Utils ----
