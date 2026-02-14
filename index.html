@@ -2,95 +2,51 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <!-- ズーム禁止 -->
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <title>モンスト EXPカレンダー</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="top-left">
-      <button id="targetBtn" class="target-btn" type="button" aria-label="目標ランクを変更">
-        <div id="targetLabel" class="target-label">目標 --</div>
-        <div id="targetNeed" class="target-need">必要EXP --</div>
-        <div class="target-ring-wrap" aria-hidden="true">
-          <svg id="targetRing" class="target-ring" viewBox="0 0 40 40">
-            <circle class="ring-bg" cx="20" cy="20" r="16"></circle>
-            <circle class="ring-bar" cx="20" cy="20" r="16"></circle>
-          </svg>
-          <div id="targetPct" class="target-pct">--%</div>
-        </div>
-      </button>
+    <button id="targetBtn" class="target" type="button" aria-label="目標ランクを変更">
+      <div class="targetText">
+        <div id="targetLabel" class="targetLine">目標 --</div>
+        <div id="targetNeed" class="targetLine">必要EXP --</div>
+      </div>
+
+      <div class="ringWrap" aria-label="進捗リング">
+        <svg id="targetRing" class="ring" viewBox="0 0 40 40" aria-hidden="true">
+          <circle class="ringBg" cx="20" cy="20" r="16"></circle>
+          <circle class="ringBar" cx="20" cy="20" r="16"></circle>
+        </svg>
+        <div id="targetPct" class="ringPct">--%</div>
+      </div>
+    </button>
+
+    <div class="centerTitle">
+      <div id="monthTotal" class="sub">累計EXP 0</div>
+      <div id="monthGain" class="sub">獲得EXP 0</div>
+      <div id="monthLabel" class="month">----</div>
     </div>
 
-    <!-- 中央タイトルのセンター維持用スペーサー -->
-    <div class="top-spacer" aria-hidden="true"></div>
-
-    <div class="top-title">
-      <div class="month-cum" id="cumTotal">累計EXP 0</div>
-      <div class="month-gain" id="monthGain">獲得EXP 0</div>
-      <div class="month" id="monthLabel">----</div>
-    </div>
-
-    
+    <div class="spacer" aria-hidden="true"></div>
   </header>
 
   <main class="screen">
     <div class="dow">
-      <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+      <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
     </div>
 
-    <!-- スワイプ月移動＆アニメ用 -->
-    <div id="gridWrap" class="grid-wrap" aria-label="カレンダー">
-      <div id="calendarGrid" class="grid grid-current"></div>
+    <div class="gridWrap">
+      <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
     </div>
 
-    <section class="entry-inline" aria-label="累計経験値入力">
-    <div class="entry-row">
-      <div id="selectedDate" class="entry-label">----</div>
-    </div>
-<input id="cumInput" class="input" inputmode="numeric" placeholder="入力:累計獲得経験値" />
-  </section>
+    <section class="entry">
+      <div id="selectedDate" class="selectedDate">----</div>
+      <input id="cumInput" class="cumInput" inputmode="numeric" placeholder="例: 123456789" />
+    </section>
   </main>
-  <!-- FABは廃止（下の直接入力） -->
-<!-- 下のスペースで直接入力（モーダル無し） -->
-  
-  
 
-  <!-- 互換用：JSが参照しても落ちない空dialog（使わない） -->
-  <dialog id="entryDialog" class="dialog" style="display:none"></dialog>
-<!-- menu modal -->
-  <dialog id="menuDialog" class="dialog">
-    <form method="dialog" class="dialog-card">
-      <div class="dialog-head">
-        <div class="dialog-title">メニュー</div>
-        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
-      </div>
-
-      <div class="dialog-body menu">
-        <button id="todayBtn" class="menu-btn" type="button">今日へ</button>
-        <div class="menu-row">
-          <button id="prevBtn" class="menu-btn" type="button">前の月</button>
-          <button id="nextBtn" class="menu-btn" type="button">次の月</button>
-        </div>
-
-        <div class="sep"></div>
-
-        <button id="exportBtn" class="menu-btn" type="button">エクスポート</button>
-        <label class="menu-btn file-btn">
-          インポート
-          <input id="importInput" type="file" accept="application/json" />
-        </label>
-
-        <div class="sep"></div>
-
-        <button id="wipeBtn" class="menu-btn danger" type="button">全データ削除</button>
-        <div class="tiny">保存先: この端末のブラウザ（localStorage）</div>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="toast" class="toast" aria-live="polite"></dialog>
   <script src="app.js"></script>
 </body>
 </html>
