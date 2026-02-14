@@ -703,7 +703,7 @@ function fitText(el, basePx, minPx, templateStr){
   function formatJPDate(ymd){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
   const [y,m,d] = ymd.split("-");
-  return `${Number(m)}月${Number(d)}日に`;
+  return `${Number(m)}月${Number(d)}日`;
 }
 
 // ---- Utils ----
