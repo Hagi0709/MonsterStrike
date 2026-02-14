@@ -274,9 +274,9 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "10";
+  exp.dataset.fitBase = "6";
   exp.dataset.fitTemplate = "+XXX,XXX,XXX";
-  exp.dataset.fitMin = "10";
+  exp.dataset.fitMin = "6";
 } else {
   exp.style.visibility = "hidden";
   exp.textContent = "0";
