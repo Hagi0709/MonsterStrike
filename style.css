@@ -39,6 +39,7 @@
 
   /* Top bar */
   .topbar{
+  position: relative;
     height: 86px;
     padding: 16px 14px 12px;
     background: var(--header);
@@ -482,3 +483,37 @@
 /* 曜日色 */
 .dow div:nth-child(1){ color: var(--red); }  /* 日 */
 .dow div:nth-child(7){ color: var(--blue); } /* 土 */
+
+
+/* 目標ランク（左上） */
+.top-left{
+  position:absolute;
+  left:12px;
+  top:10px;
+  display:flex;
+  align-items:flex-start;
+}
+
+.target-btn{
+  appearance:none;
+  border:0;
+  background:transparent;
+  padding:0;
+  margin:0;
+  text-align:left;
+  color:var(--orange);
+  font-weight:900;
+  line-height:1.05;
+}
+
+.target-label{
+  font-size:14px;
+  letter-spacing:0.2px;
+}
+
+.target-need{
+  margin-top:4px;
+  font-size:12px;
+  font-weight:800;
+  opacity:0.95;
+}
