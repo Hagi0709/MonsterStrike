@@ -42,6 +42,7 @@
   position: relative;
     height: 86px;
     padding: 16px 14px 12px;
+    padding-left: clamp(120px, 34vw, 170px);
     background: var(--header);
     display:flex;
     align-items:flex-end;
@@ -490,6 +491,8 @@
   position:absolute;
   left:12px;
   top:10px;
+  width: calc(clamp(120px, 34vw, 170px) - 24px);
+  max-width: calc(clamp(120px, 34vw, 170px) - 24px);
   display:flex;
   align-items:flex-start;
 }
@@ -509,6 +512,9 @@
 .target-label{
   font-size:14px;
   letter-spacing:0.2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .target-need{
@@ -516,4 +522,7 @@
   font-size:12px;
   font-weight:800;
   opacity:0.95;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
