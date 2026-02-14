@@ -1,6 +1,7 @@
 // モンスト EXPカレンダー（累計入力→増加量表示）- app.js
 (() => {
   const STORAGE_KEY = "monst_cumxp_v2";
+  let currentCumXPGlobal = 0;
 
   /** @type {Record<string, number>} 累計経験値 */
   let cum = load();
@@ -185,6 +186,8 @@ function promptTargetRank(){
   let animating = false;
 
   // Elements
+  let targetBtn=null, targetLabelEl=null, targetNeedEl=null;
+
   const monthLabel = document.getElementById("monthLabel");
   const gridWrap = document.getElementById("gridWrap");
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
@@ -228,7 +231,10 @@ const entryDialog = document.getElementById("entryDialog");
   // ランクテーブル読み込み（読み込み後に再描画して各日付にランクを表示）
   loadRankTable().then(() => {
     renderNoAnim();
+    updateTargetUI(currentCumXPGlobal||0);
   });
+
+  if (targetBtn) targetBtn.addEventListener("click", promptTargetRank);
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
@@ -259,7 +265,7 @@ const entryDialog = document.getElementById("entryDialog");
   }, { passive: true });
 
   // Events
-  menuBtn.addEventListener("click", () => menuDialog.showModal());
+  if (menuBtn) menuBtn.addEventListener("click", () => menuDialog.showModal());
 
   prevBtn.addEventListener("click", () => changeMonth(-1));
   nextBtn.addEventListener("click", () => changeMonth(1));
@@ -376,8 +382,9 @@ const entryDialog = document.getElementById("entryDialog");
   // 合計更新（その月の増加合計）
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-      currentCumXPGlobal = cumTotal;
-      updateTargetUI(cumTotal);
+      const latestCum = getLatestCumulativeValue(cum);
+      currentCumXPGlobal = latestCum;
+      updateTargetUI(latestCum);
 
 
   requestAnimationFrame(() => {
@@ -641,7 +648,8 @@ function applyFits(scopeEl){
     // 自動で全文表示できるようfitTextを使用
     fitText(el,10,6,"+XXX,XXX,XXX");
   });
-});
+}
+);
 }
 
 function calcFitFont(el, basePx, minPx, templateStr){
@@ -756,7 +764,7 @@ function fitText(el, basePx, minPx, templateStr){
   function formatJPDate(ymd){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
   const [y,m,d] = ymd.split("-");
-  return `${Number(m)}月${Number(d)}日に`;
+  return `${Number(m)}月${Number(d)}日`;
 }
 
 // ---- Utils ----
@@ -799,6 +807,3 @@ function formatSignedInt(n) {
     showToast._t = setTimeout(() => { try { toast.close(); } catch {} }, 1100);
   }
 })();
-let currentCumXPGlobal = 0;
-
-if(targetBtn){ targetBtn.addEventListener("click", promptTargetRank); }
