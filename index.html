@@ -2,17 +2,15 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <!-- ズーム禁止 -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <title>モンスト EXPカレンダー</title>
-  <link rel="icon" href="BEBDE62B-D5A5-4708-8173-51334F1C71FB.jpg" />
-  <link rel="apple-touch-icon" href="BEBDE62B-D5A5-4708-8173-51334F1C71FB.jpg" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="topbar">
-    <button id="muteBtn" class="top-icon" aria-label="表示切替">
-      <span class="icon">🔕</span>
-    </button>
+    <!-- 左の非表示ボタンは削除：中央タイトルのセンター維持用スペーサー -->
+    <div class="top-spacer" aria-hidden="true"></div>
 
     <div class="top-title">
       <div class="month" id="monthLabel">----</div>
@@ -28,7 +26,10 @@
       <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
     </div>
 
-    <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
+    <!-- スワイプ月移動＆アニメ用 -->
+    <div id="gridWrap" class="grid-wrap" aria-label="カレンダー">
+      <div id="calendarGrid" class="grid grid-current"></div>
+    </div>
   </main>
 
   <!-- bottom total pill -->
@@ -64,7 +65,7 @@
 
         <div class="row mini">
           <div class="label">計算プレビュー</div>
-          <div id="preview" class="preview">—</div>
+          <div id="preview" class="preview">--</div>
         </div>
       </div>
 
