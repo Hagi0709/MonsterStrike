@@ -108,7 +108,7 @@ body{
   position: absolute;
 
   /* 左右を完全フル幅へ */
-  inset: 8px 0 20px 0;
+  inset: 8px max(6px, env(safe-area-inset-right)) 20px max(6px, env(safe-area-inset-left));
 
   display:grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
