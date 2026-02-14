@@ -5,6 +5,53 @@
   /** @type {Record<string, number>} 累計経験値 */
   let cum = load();
 
+  /** @type {{rank:number,xp:number}[]} ランクテーブル（csv: 左=ランク, 右=累計経験値） */
+  let rankTable = [];
+  let rankTableReady = false;
+
+  async function loadRankTable(){
+    try{
+      const res = await fetch("rank_table.csv", { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const text = await res.text();
+      rankTable = text
+        .trim()
+        .split(/\r?\n/)
+        .map(line => {
+          const [r, x] = line.split(",");
+          return { rank: Number(r), xp: Number(x) };
+        })
+        .filter(v => Number.isFinite(v.rank) && Number.isFinite(v.xp))
+        .sort((a,b) => a.xp - b.xp);
+      rankTableReady = rankTable.length > 0;
+    } catch (e) {
+      console.error("rank_table.csv 読み込み失敗", e);
+      rankTable = [];
+      rankTableReady = false;
+    }
+  }
+
+  function getRankFromXP(xp){
+    if (!rankTableReady) return null;
+    const v = Math.max(0, Math.floor(Number(xp) || 0));
+
+    // 二分探索：xp以下の最大rank
+    let low = 0;
+    let high = rankTable.length - 1;
+    let result = rankTable[0]?.rank ?? 1;
+
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (rankTable[mid].xp <= v) {
+        result = rankTable[mid].rank;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return result;
+  }
+
   // UI state
   let viewDate = new Date();         // 表示月
   let selected = toYMD(new Date());  // 選択日
@@ -49,6 +96,11 @@ const entryDialog = document.getElementById("entryDialog");
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   renderNoAnim();
   syncInlineOnInit();
+
+  // ランクテーブル読み込み（読み込み後に再描画して各日付にランクを表示）
+  loadRankTable().then(() => {
+    renderNoAnim();
+  });
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
@@ -184,7 +236,7 @@ const entryDialog = document.getElementById("entryDialog");
 
   const newGrid = document.createElement("div");
   newGrid.className = "grid grid-anim " + (dir === "next" ? "grid-enter-right" : "grid-enter-left");
-  fillGrid(newGrid, viewDate, deltaMap);
+  fillGrid(newGrid, viewDate, deltaMap, cum);
 
   // old grid animate out
   calendarGrid.classList.add("grid-anim");
@@ -219,7 +271,7 @@ function renderNoAnim() {
   const deltaMap = buildDeltaMap(cum);
   calendarGrid.className = "grid grid-current";
   calendarGrid.innerHTML = "";
-  fillGrid(calendarGrid, viewDate, deltaMap);
+  fillGrid(calendarGrid, viewDate, deltaMap, cum);
 
   monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
 
@@ -231,7 +283,7 @@ function renderNoAnim() {
 }
 
   // ---- Grid fill ----
-  function fillGrid(targetGrid, monthDate, deltaMap) {
+  function fillGrid(targetGrid, monthDate, deltaMap, cumulativeMap) {
     const cells = buildCalendarCells(monthDate);
     const todayYMD = toYMD(new Date());
 
@@ -249,6 +301,20 @@ function renderNoAnim() {
       dn.textContent = String(c.day);
       cell.appendChild(dn);
 
+      // ランク表示（累計EXPが入力されている日だけ表示）
+      const rk = document.createElement(\"div\");
+      rk.className = \"rank\";
+      const cv = cumulativeMap ? cumulativeMap[c.ymd] : null;
+      if (rankTableReady && typeof cv === \"number\") {
+        const r = getRankFromXP(cv);
+        rk.textContent = r != null ? `Lv.${r}` : \"\";
+      } else {
+        // 高さ固定のためvisibilityで隠す
+        rk.style.visibility = \"hidden\";
+        rk.textContent = \"Lv.0\";
+      }
+      cell.appendChild(rk);
+
       const d = deltaMap[c.ymd];
       const exp = document.createElement("div");
       exp.className = "exp";
@@ -260,7 +326,7 @@ if (typeof d === "number") {
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "8";
+  exp.dataset.fitBase = "10";
   exp.dataset.fitTemplate = "+XXX,XXX,XXX";
   exp.dataset.fitMin = "6";
 } else {
