@@ -17,11 +17,14 @@
   const monthTotalEl = document.getElementById("monthTotal");
 
   const menuBtn = document.getElementById("menuBtn");
-  // Inline entry (no FAB / no modal)
-  const inlineSelectedDateEl = document.getElementById("inlineSelectedDate");
-  const inlineCumInput = document.getElementById("inlineCumInput");
-  const inlineSaveBtn = document.getElementById("inlineSaveBtn");
-  const inlineDeleteBtn = document.getElementById("inlineDeleteBtn");
+  const fab = document.getElementById("fab");
+
+  const entryDialog = document.getElementById("entryDialog");
+  const selectedDateEl = document.getElementById("selectedDate");
+  const cumInput = document.getElementById("cumInput");
+  const previewEl = document.getElementById("preview");
+  const saveBtn = document.getElementById("saveBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
 
   const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
@@ -49,14 +52,14 @@
   let touchY = null;
 
   gridWrap.addEventListener("touchstart", (e) => {
-    if (menuDialog.open) return;
+    if (entryDialog.open || menuDialog.open) return;
     const t = e.changedTouches[0];
     touchX = t.clientX;
     touchY = t.clientY;
   }, { passive: true });
 
   gridWrap.addEventListener("touchend", (e) => {
-    if (menuDialog.open) return;
+    if (entryDialog.open || menuDialog.open) return;
     if (touchX == null || touchY == null) return;
 
     const t = e.changedTouches[0];
@@ -86,56 +89,43 @@
     menuDialog.close();
   });
 
-  // Inline entry (no FAB / no modal)
-  function syncInline() {
-    inlineSelectedDateEl.textContent = selected;
-    inlineCumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
-  }
+  // 仕様：日付を選択 → 右下＋で入力
+  fab.addEventListener("click", () => openEntry(selected));
 
-  inlineSaveBtn.addEventListener("click", () => {
-    const n = normalizeNumber(inlineCumInput.value);
+  saveBtn.addEventListener("click", () => {
+    const n = normalizeNumber(cumInput.value);
     if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
-
     if (n === 0) {
-      if (cum[selected] != null) {
-        delete cum[selected];
-        persist();
-        showToast("削除しました");
-      } else {
-        showToast("この日は記録なし");
-      }
+      delete cum[selected];
+      persist();
+      showToast("削除しました");
+      entryDialog.close();
       renderNoAnim();
-      syncInline();
       return;
     }
-
     cum[selected] = n;
     persist();
     showToast("保存しました");
+    entryDialog.close();
     renderNoAnim();
-    syncInline();
   });
 
-  inlineDeleteBtn.addEventListener("click", () => {
+  deleteBtn.addEventListener("click", () => {
     if (cum[selected] == null) { showToast("この日は記録なし"); return; }
     delete cum[selected];
     persist();
     showToast("削除しました");
+    entryDialog.close();
     renderNoAnim();
-    syncInline();
   });
 
   // 入力しながら3桁カンマ
-  inlineCumInput.addEventListener("input", () => {
-    const raw = inlineCumInput.value;
-    const n = normalizeNumber(raw);
-    if (n === null) return;
-    const before = inlineCumInput.selectionStart;
-    inlineCumInput.value = formatInt(n);
-    // おおざっぱに末尾維持（iOS向け）
-    try { inlineCumInput.setSelectionRange(before, before); } catch {}
+  cumInput.addEventListener("input", () => {
+    formatNumberInput(cumInput);
+    updatePreview();
   });
-exportBtn.addEventListener("click", () => {
+
+  exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
       version: 5,
@@ -247,8 +237,6 @@ function renderNoAnim() {
 
   monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
 
-  syncInline();
-
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
@@ -281,14 +269,14 @@ function renderNoAnim() {
 
 if (typeof d === "number") {
   if (d < 0) exp.classList.add("neg");
-  exp.textContent = formatInt(Math.abs(d));
+  exp.textContent = formatSignedInt(d);
 
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
-  exp.dataset.fitBase = "18";
-  exp.dataset.fitTemplate = "XXX,XXX,XXX";
-  exp.dataset.fitMin = "10";
+  exp.dataset.fitBase = "10";
+  exp.dataset.fitTemplate = "+XXX,XXX,XXX";
+  exp.dataset.fitMin = "6";
 } else {
   exp.style.visibility = "hidden";
   exp.textContent = "0";
@@ -304,7 +292,32 @@ if (typeof d === "number") {
     }
   }
 
-function buildDeltaMap(cumulative) {
+  // ---- Entry ----
+  function openEntry(ymd) {
+    selected = ymd;
+    selectedDateEl.textContent = selected;
+    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
+    updatePreview();
+    entryDialog.showModal();
+    setTimeout(() => cumInput.focus(), 60);
+  }
+
+  function updatePreview() {
+    const n = normalizeNumber(cumInput.value);
+    if (n === null) { previewEl.textContent = "--"; return; }
+    if (n === 0) { previewEl.textContent = "削除"; return; }
+
+    const prev = findPrevCumulative(selected, cum);
+    if (!prev) { previewEl.textContent = "前回記録なし（増加量は表示されません）"; return; }
+
+    const diff = n - prev.value;
+    const sign = diff >= 0 ? "+" : "−";
+    const cls = diff >= 0 ? "plus" : "neg";
+    previewEl.innerHTML = `前回(${prev.date})との差：<span class="${cls}">${sign}${formatInt(Math.abs(diff))}</span>`;
+  }
+
+  // ---- Data to delta ----
+  function buildDeltaMap(cumulative) {
     const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
     keys.sort();
 
@@ -411,12 +424,78 @@ function buildDeltaMap(cumulative) {
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
   const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
+  if (!list.length) return;
+
+  // 仕様：各日付の表示は「+XXX,XXX,XXX」が枠内いっぱいになるフォントサイズを基準にし、
+  //      すべてのセルで同じフォントサイズに固定する（列幅は固定のまま）
+  const sample = list[0];
+
+  const basePx = Number(sample.dataset.fitBase || 16);
+  const minPx  = Number(sample.dataset.fitMin || 10);
+  const tpl    = (sample.dataset.fitTemplate || "").trim();
+
+  if (tpl) {
+    // 基準サイズをそのまま使用（自動fit無効）
+    const best = basePx;
+
+    // CSS変数にも載せておく
+    scopeEl.style.setProperty("--expFontPx", best + "px");
+
+    // CSS変数にも載せておく（デバッグ＆保険）
+    scopeEl.style.setProperty("--expFontPx", best + "px");
+
+    list.forEach(el => {
+      el.style.transform = "";
+      el.style.transformOrigin = "center";
+      el.style.fontSize = best + "px";
+
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetWidth;
+
+      // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
+      if (el.scrollWidth > el.clientWidth) {
+        const ratio = el.clientWidth / el.scrollWidth;
+        const scale = Math.max(0.72, Math.min(1, ratio));
+        el.style.transform = `scaleX(${scale})`;
+      }
+    });
+    return;
+  }
+
+  // テンプレが無い場合は従来どおり個別にfit
   list.forEach(el => {
-    const basePx = Number(el.dataset.fitBase || 16);
-    const minPx  = Number(el.dataset.fitMin || 10);
-    const tpl    = (el.dataset.fitTemplate || "").trim();
-    fitText(el, basePx, minPx, tpl || null);
+    const base = Number(el.dataset.fitBase || 16);
+    const min  = Number(el.dataset.fitMin || 10);
+    const template = (el.dataset.fitTemplate || "").trim();
+    fitText(el, base, min, template || null);
   });
+}
+
+function calcFitFont(el, basePx, minPx, templateStr){
+  const cs = getComputedStyle(el);
+  const family = cs.fontFamily || "system-ui";
+  const weight = cs.fontWeight || "900";
+
+  const canvas = calcFitFont._c || (calcFitFont._c = document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");
+
+  const measure = (s, size) => {
+    ctx.font = `${weight} ${size}px ${family}`;
+    return ctx.measureText(s).width;
+  };
+
+  // iOS Safariで計測がズレるのを避ける（強制レイアウト）
+  // eslint-disable-next-line no-unused-expressions
+  el.offsetWidth;
+
+  let low = minPx, high = basePx, best = minPx;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const w = measure(templateStr, mid);
+    if (w <= el.clientWidth) { best = mid; low = mid + 1; }
+    else { high = mid - 1; }
+  }
+  return best;
 }
 
 function fitText(el, basePx, minPx, templateStr){
@@ -528,10 +607,11 @@ function fitText(el, basePx, minPx, templateStr){
   }
 
   function formatInt(n) { return Number(n).toLocaleString("ja-JP"); }
-  function formatSignedInt(n) {
-    const sign = n >= 0 ? "+" : "−";
-    return sign + formatInt(Math.abs(n));
-  }
+function formatSignedInt(n) {
+  // 記号は付けない
+  // 色は .exp / .exp.neg のCSSで制御する
+  return formatInt(Math.abs(n));
+}
 
   function showToast(msg) {
     toast.textContent = msg;
