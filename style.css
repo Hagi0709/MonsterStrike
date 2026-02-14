@@ -1,551 +1,485 @@
-:root{
-  --yellow:#f2c300;
-  --bg:#ffffff;
-  --text:#111;
-  --muted:#7a7a7a;
-  --red:#e04a4a;
-  --blue:#2f73ff;
-  --orange:#ff9500;
-  --today-outline: rgba(255,149,0,.55);
-  --select:#e9e9e9;
-  --card:#f1f1f1;
-}
+  /* モンスト EXPカレンダー - style.css */
+  :root{
+    --bg:#ffffff;
+    --text:#111111;
+    --muted:#8a8a8a;
+
+    --header:#f3c312;
+    --headerText:#1b1b1b;
+
+    --blue:#1f75ff;
+    --red:#ff3b30;
+    --orange:#ff9500;
+
+    --rank:#9ACD32;
+
+    --select:#ececec;
+    --today:#f6f6f6;
+
+    --pillBg:#f6f6f6;
+    --pillShadow: 0 10px 30px rgba(0,0,0,.15);
+
+    --fab:#f3c312;
+    --fabShadow: 0 16px 35px rgba(0,0,0,.22);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
+    background: var(--bg);
+    color: var(--text);
+    touch-action: manipulation;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+  }
+
+  /* Top bar */
+  .topbar{
+    height: 86px;
+    padding: 16px 14px 12px;
+    background: var(--header);
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .top-spacer{ width:44px; height:44px; }
+  .top-title{
+    display:flex;
+    flex-direction: column;
+    align-items:center;
+    justify-content:flex-end;
+    flex: 1;
+    margin: 0 10px;
+    gap: 2px;
+  }
+  .month{
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--headerText);
+    letter-spacing: .02em;
+  }
+  .month-gain{
+    text-align: center;
+    font-weight: 900;
+    font-size: 14px;
+    color: var(--headerText);
+    opacity: .92;
+    letter-spacing: .02em;
+  }
+
+  .month-cum{
+    text-align: center;
+    font-weight: 900;
+    font-size: 14px;
+    color: var(--headerText);
+    opacity: .92;
+    letter-spacing: .02em;
+  }
+  .top-icon{
+    appearance:none;
+    border:none;
+    background: transparent;
+    width: 44px;
+    height: 44px;
+    display:grid;
+    place-items:center;
+    border-radius: 12px;
+    cursor:pointer;
+  }
+  .top-icon:active{transform: translateY(1px)}
+  .icon{
+    font-size: 22px;
+    line-height: 1;
+    color: rgba(0,0,0,.45);
+  }
+
+  /* Screen */
+  .screen{
+    /* 1画面に収めるため、カレンダー領域を可変にする */
+    padding: 0;
+    padding-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+  }
 
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  -webkit-text-size-adjust:100%;
-}
 
-.topbar{
-  position:sticky;
-  top:0;
-  z-index:10;
-  background:var(--yellow);
-  padding: calc(env(safe-area-inset-top) + 10px) 12px 10px;
-  display:grid;
-  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
-  align-items:center;
-  gap:10px;
-}
+  .dow{
+    display:grid;
+    grid-template-columns: repeat(7,minmax(0,1fr));
 
-/* 左：目標 */
-.target-btn{
-  justify-self:start;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  border:none;
-  background:transparent;
-  padding:0;
-  text-align:left;
-  color:#000;
-}
+    /* 左右余白を削って列幅を稼ぐ（端末の安全領域は最低限だけ確保） */
+    padding: 12px max(6px, env(safe-area-inset-left)) 8px;
 
-.target-lines{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-.target-line{ font-weight:800; font-size:16px; line-height:1.1; white-space:nowrap; }
-#targetNeed{ font-size:14px; font-weight:800; }
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .dow > div{ text-align:center; }
 
-.target-ring{
-  position:relative;
-  width:34px;
-  height:34px;
-  flex:0 0 34px;
-}
-.ring{ width:34px; height:34px; transform:rotate(-90deg); }
-.ring-track{
-  fill:none;
-  stroke: rgba(0,0,0,.18);
-  stroke-width:4;
-}
-.ring-bar{
-  fill:none;
-  stroke: rgba(0,0,0,.55);
-  stroke-width:4;
-  stroke-linecap:round;
-  stroke-dasharray: 0 999;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset .25s linear;
-}
-.ring-text{
-  position:absolute;
-  inset:0;
+  /* スライド用枠 */
+
+  /* gridのabsolute基準（これが無いとカレンダーが途中から/崩れて見える） */
+  .grid-wrap{
+    position: relative;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+
+
+  .grid{
+    position: absolute;
+
+    /* 左右を完全フル幅へ */
+    inset: 8px max(6px, env(safe-area-inset-right)) 8px max(6px, env(safe-area-inset-left));
+
+    display:grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+
+    /* 横gapも削って列をさらに太く */
+    gap: 12px 0;
+
+    will-change: transform, opacity;
+  }
+  .grid{
+    position: absolute;
+
+    /* 左右を完全フル幅へ */
+    inset: 8px max(6px, env(safe-area-inset-right)) 8px max(6px, env(safe-area-inset-left));
+
+    display:grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+
+    /* 横gapも削って列をさらに太く */
+    gap: 12px 0;
+
+    will-change: transform, opacity;
+  }
+  .grid-current{ opacity: 1; transform: translateX(0); }
+  .grid-enter-right{ opacity: 0; transform: translateX(18%); }
+  .grid-enter-left{ opacity: 0; transform: translateX(-18%); }
+  .grid-exit-right{ opacity: 0; transform: translateX(18%); }
+  .grid-exit-left{ opacity: 0; transform: translateX(-18%); }
+  .grid-anim{ transition: transform 220ms ease, opacity 220ms ease; }
+
+  /* Day cell */
+  .day{
+    min-height: 66px;
+    border-radius: 12px;
+
+    /* 左右paddingを削って"数字の横幅"を確保（列幅固定のまま見やすく） */
+    padding: 6px 4px 6px;
+
+    position: relative;
+    cursor: pointer;
+    background: transparent;
+
+    /* これが無いと中身の最小幅で列が広がる */
+    min-width: 0;
+
+    /* 日付＋増加量をセル内で安定して配置 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .day:hover{ background: rgba(0,0,0,.03); }
+  .day:active{ transform: translateY(1px); }
+
+  .day.out{
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+
+  .day.selected{ background: var(--select); }
+  .day.today:not(.selected){ background: var(--today); }
+
+  /* 日曜日は赤（今日オレンジ優先） */
+  .day
+  .day.today .dnum{ color: var(--orange); }
+
+  /* 日付：小さく、細く */
+  \.dnum{
+    font-size: 16px;
+    font-weight: 600;
+    text-align:center;
+    white-space: nowrap;
+    min-width: 0;
+    margin-top: -4px;
+  }
+
+  /* ランク表示（増加量の上） */
+  .rank{
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 0;
+    color: var(--blue); /* 増加量と同じ色 */
+  }
+
+  /* 増加量：1行で必ず収める（JSでフォント縮小） */
+  .exp{
+  width:100%;
+  height:28px;
+  margin-top:2px;
+
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:11px;
+
   font-weight:900;
-}
+  font-size:8px;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0;
+  color:var(--blue);
 
-/* 中央：累計/獲得/月 */
-.top-title{
-  justify-self:center;
-  text-align:center;
-  line-height:1.05;
-  user-select:none;
-}
-.month-cum, .month-gain{
-  font-weight:800;
-  font-size:14px;
-}
-.month{
-  margin-top:6px;
-  font-size:34px;
-  font-weight:900;
-  white-space:nowrap; /* 3月が改行されるのを防ぐ */
-}
-
-.top-spacer{ justify-self:end; }
-
-/* 曜日 */
-.dow{
-  display:grid;
-  grid-template-columns: repeat(7, minmax(0,1fr));
-  padding: 12px max(6px, env(safe-area-inset-left)) 8px;
-  color:var(--muted);
-  font-weight:800;
-  letter-spacing:.08em;
-  font-size:14px;
-  user-select:none;
-}
-.dow div{ text-align:center; }
-.dow div:nth-child(1){ color:var(--red); }
-.dow div:nth-child(7){ color:var(--blue); }
-
-/* カレンダー全体 */
-.calendar{
-  display:flex;
-  flex-direction:column;
-  height: calc(100vh - 120px);
-}
-.grid-wrap{
-  position:relative;
-  flex:1;
-  padding: 12px max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
-  overflow:hidden;
-}
-
-.grid{
-  position:absolute;
-  inset:12px max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
-  display:grid;
-  grid-template-columns: repeat(7, minmax(0,1fr)); /* 列幅固定 */
-  grid-auto-rows: 74px;
-  column-gap: 0px;
-  row-gap: 16px;
-  align-content:start;
-}
-
-.day{
-  border-radius:14px;
-  background:transparent;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-  padding-top:10px;
-  user-select:none;
-  cursor:pointer;
-}
-.day.out{ opacity:0; pointer-events:none; }
-
-.dnum{
-  font-size:18px;          /* 元の見た目へ寄せる */
-  font-weight:900;
-  line-height:1.05;
-}
-
-/* 日付は赤くしない：曜日だけ色付け */
-.day .dnum{ color:#111; }
-
-/* 今日：枠線だけ（薄め） */
-.day.today{
-  outline:2px solid var(--today-outline);
-  outline-offset:-2px;
-  background:transparent;
-}
-.day.today .dnum{ color:var(--orange); }
-
-/* 選択日：塗り背景 */
-.day.selected{
-  outline:none;
-  background:var(--select);
-}
-
-/* ランク/増加量 */
-.rank{
-  margin-top:6px;
-  font-weight:900;
-  font-size:12px;
-  color:#2f73ff; /* 増加量と同系色に合わせる */
-}
-.delta{
-  margin-top:2px;
-  font-weight:900;
-  font-size:8px;   /* 固定 */
-  color:#2f73ff;
-  line-height:1.0;
   white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
-.day.has-data .delta{
-  /* 長い場合でも潰れない程度に縮小 */
-  font-size: min(8px, 2.2vw);
-}
-
-/* 画面下 */
-.panel{
-  padding: 14px 16px calc(env(safe-area-inset-bottom) + 18px);
-}
-.date-row{
-  display:flex;
-  align-items:baseline;
-  gap:12px;
-  margin-bottom:10px;
-}
-.date-label{
-  font-weight:900;
-  font-size:20px;
-}
-.input{
-  width:100%;
-  border-radius:14px;
-  border:2px solid #ddd;
-  padding:14px 16px;
-  font-size:20px;
-  font-weight:800;
-  outline:none;
-}
-.input:focus{ border-color:#8ab4ff; box-shadow:0 0 0 3px rgba(47,115,255,.18); }
-
-/* アニメ（既存のJSに合わせる） */
-.grid-anim{ will-change: transform, opacity; }
-.grid-enter-right{ transform: translateX(100%); opacity:0; }
-.grid-enter-left{ transform: translateX(-100%); opacity:0; }
-.grid-exit-left{ transform: translateX(-100%); opacity:0; }
-.grid-exit-right{ transform: translateX(100%); opacity:0; }
-.grid-current{ transform: translateX(0); opacity:1; }
+  .exp.neg{ color: var(--red); }
 
 
-/* Dialogs */
-.dialog{
-  border: none;
-  padding: 0;
-  width: min(520px, calc(100vw - 24px));
-  border-radius: 18px;
-}
-.dialog::backdrop{ background: rgba(0,0,0,.25); }
+  /* 下のスペースで直接入力（モーダル無し） */
+  .entry-inline{
+    padding: 10px 14px 92px; /* 1画面内に収めつつ合計ピルに隠れない */
+    flex: 0 0 auto;
+  }
 
-.dialog-card{ padding: 14px; background: #fff; }
+  .entry-row{
+    display:flex;
+    align-items:baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .entry-label{
+    color: var(--muted);
+    font-weight: 800;
+    font-size: 14px;
+    min-width: 44px;
+  }
+  .entry-date{
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .entry-actions{
+    display:flex;
+    gap: 10px;
+    padding-top: 10px;
+  }
 
-.dialog-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom: 10px;
-}
-.dialog-title{ font-size: 16px; font-weight: 900; }
-.dialog-close{
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(0,0,0,.06);
-  font-size: 20px;
-  cursor:pointer;
-}
+  /* Bottom total pill */
+  .total-wrap{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 22px;
+    display:flex;
+    justify-content:center;
+    pointer-events:none;
+    z-index: 9;
+  }
+  .total-pill{
+    pointer-events:none;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: 999px;
+    background: var(--pillBg);
+    box-shadow: var(--pillShadow);
+  }
+  .yen{
+    font-weight: 900;
+    color: var(--blue);
+    opacity: .9;
+  }
+  .total-num{
+    font-weight: 900;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+  }
 
-.dialog-body{ padding: 6px 2px 10px; }
-.row{ margin-bottom: 8px; }
+  /* FAB（右下＋）は使わない：下の直接入力へ */
+  .fab{ display:none; }
 
-.row.mini{ margin-top: 6px; margin-bottom: 6px; }
-.label{
-  display:block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.value{
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.preview{
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.preview .plus{ color: var(--blue); }
-.preview .neg{ color: var(--red); }
+  /* Dialogs */
+  .dialog{
+    border: none;
+    padding: 0;
+    width: min(520px, calc(100vw - 24px));
+    border-radius: 18px;
+  }
+  .dialog::backdrop{ background: rgba(0,0,0,.25); }
 
-.input{
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.12);
-  font-size: 16px;
-  outline:none;
-}
-.input:focus{
-  border-color: rgba(31,117,255,.45);
-  box-shadow: 0 0 0 3px rgba(31,117,255,.12);
-}
+  .dialog-card{ padding: 14px; background: #fff; }
 
-.help{
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--muted);
-}
+  .dialog-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 10px;
+  }
+  .dialog-title{ font-size: 16px; font-weight: 900; }
+  .dialog-close{
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    background: rgba(0,0,0,.06);
+    font-size: 20px;
+    cursor:pointer;
+  }
 
-.dialog-actions{
-  display:flex;
-  gap: 10px;
-  padding-top: 4px;
-}
-.btn{
-  flex: 1;
-  border: none;
-  border-radius: 14px;
-  padding: 12px 12px;
-  font-weight: 900;
-  cursor:pointer;
-}
-.btn.primary{
-  background: rgba(31,117,255,.12);
-  color: #0a2f7a;
-}
-.btn.danger{
-  background: rgba(255,0,0,.08);
-  color: #7a1111;
-}
+  .dialog-body{ padding: 6px 2px 10px; }
+  .row{ margin-bottom: 8px; }
 
-/* Menu */
-.menu .menu-btn{
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(0,0,0,.03);
-  font-weight: 800;
-  cursor:pointer;
-}
-.menu .menu-btn:active{transform: translateY(1px)}
-.menu .menu-row{
-  display:flex;
-  gap:10px;
-  margin-top: 10px;
-}
-.menu .menu-row .menu-btn{flex:1}
-.menu .menu-btn.danger{
-  background: rgba(255,0,0,.08);
-  border-color: rgba(255,0,0,.15);
-}
-.file-btn input{display:none}
-.sep{
-  height: 1px;
-  background: rgba(0,0,0,.10);
-  margin: 12px 0;
-}
-.tiny{
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
+  .row.mini{ margin-top: 6px; margin-bottom: 6px; }
+  .label{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .value{
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .preview{
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
+  .preview .plus{ color: var(--blue); }
+  .preview .neg{ color: var(--red); }
 
-/* Toast */
-.toast{
-  border:none;
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: rgba(0,0,0,.82);
-  color: #fff;
-}
-.toast::backdrop{background: transparent}
+  .input{
+    width: 100%;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,.12);
+    font-size: 16px;
+    outline:none;
+  }
+  .input:focus{
+    border-color: rgba(31,117,255,.45);
+    box-shadow: 0 0 0 3px rgba(31,117,255,.12);
+  }
 
-/* 1画面に収める（カレンダー＋入力欄） */
-:root{
-  --topbarH: 86px;
-  --dowH: 44px;
-  --entryH: 140px;
-}
+  .help{
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--muted);
+  }
 
-.dow{ height: var(--dowH); }
+  .dialog-actions{
+    display:flex;
+    gap: 10px;
+    padding-top: 4px;
+  }
+  .btn{
+    flex: 1;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 12px;
+    font-weight: 900;
+    cursor:pointer;
+  }
+  .btn.primary{
+    background: rgba(31,117,255,.12);
+    color: #0a2f7a;
+  }
+  .btn.danger{
+    background: rgba(255,0,0,.08);
+    color: #7a1111;
+  }
 
-.grid-wrap{
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
-  height: calc(100dvh - var(--topbarH) - var(--dowH) - var(--entryH));
-  min-height: 0;
-}
+  /* Menu */
+  .menu .menu-btn{
+    width: 100%;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(0,0,0,.03);
+    font-weight: 800;
+    cursor:pointer;
+  }
+  .menu .menu-btn:active{transform: translateY(1px)}
+  .menu .menu-row{
+    display:flex;
+    gap:10px;
+    margin-top: 10px;
+  }
+  .menu .menu-row .menu-btn{flex:1}
+  .menu .menu-btn.danger{
+    background: rgba(255,0,0,.08);
+    border-color: rgba(255,0,0,.15);
+  }
+  .file-btn input{display:none}
+  .sep{
+    height: 1px;
+    background: rgba(0,0,0,.10);
+    margin: 12px 0;
+  }
+  .tiny{
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
 
-.entry-inline{
-  flex: 0 0 auto;
-  height: var(--entryH);
-  padding: 10px 14px 12px;
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
+  /* Toast */
+  .toast{
+    border:none;
+    border-radius: 14px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,.82);
+    color: #fff;
+  }
+  .toast::backdrop{background: transparent}
+
+  /* 1画面に収める（カレンダー＋入力欄） */
+  :root{
+    --topbarH: 86px;
+    --dowH: 44px;
+    --entryH: 140px;
+  }
+
+  .dow{ height: var(--dowH); }
+
+  .grid-wrap{
+    position: relative;
+    overflow: hidden;
+    flex: 0 0 auto;
+    height: calc(100dvh - var(--topbarH) - var(--dowH) - var(--entryH));
+    min-height: 0;
+  }
+
+  .entry-inline{
+    flex: 0 0 auto;
+    height: var(--entryH);
+    padding: 10px 14px 12px;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
 
-/* Dialogs */
-.dialog{
-  border: none;
-  padding: 0;
-  width: min(520px, calc(100vw - 24px));
-  border-radius: 18px;
-}
-.dialog::backdrop{ background: rgba(0,0,0,.25); }
-
-.dialog-card{ padding: 14px; background: #fff; }
-
-.dialog-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom: 10px;
-}
-.dialog-title{ font-size: 16px; font-weight: 900; }
-.dialog-close{
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(0,0,0,.06);
-  font-size: 20px;
-  cursor:pointer;
-}
-
-.dialog-body{ padding: 6px 2px 10px; }
-.row{ margin-bottom: 8px; }
-
-.row.mini{ margin-top: 6px; margin-bottom: 6px; }
-.label{
-  display:block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.value{
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.preview{
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-.preview .plus{ color: var(--blue); }
-.preview .neg{ color: var(--red); }
-
-.input{
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.12);
-  font-size: 16px;
-  outline:none;
-}
-.input:focus{
-  border-color: rgba(31,117,255,.45);
-  box-shadow: 0 0 0 3px rgba(31,117,255,.12);
-}
-
-.help{
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.dialog-actions{
-  display:flex;
-  gap: 10px;
-  padding-top: 4px;
-}
-.btn{
-  flex: 1;
-  border: none;
-  border-radius: 14px;
-  padding: 12px 12px;
-  font-weight: 900;
-  cursor:pointer;
-}
-.btn.primary{
-  background: rgba(31,117,255,.12);
-  color: #0a2f7a;
-}
-.btn.danger{
-  background: rgba(255,0,0,.08);
-  color: #7a1111;
-}
-
-/* Menu */
-.menu .menu-btn{
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.10);
-  background: rgba(0,0,0,.03);
-  font-weight: 800;
-  cursor:pointer;
-}
-.menu .menu-btn:active{transform: translateY(1px)}
-.menu .menu-row{
-  display:flex;
-  gap:10px;
-  margin-top: 10px;
-}
-.menu .menu-row .menu-btn{flex:1}
-.menu .menu-btn.danger{
-  background: rgba(255,0,0,.08);
-  border-color: rgba(255,0,0,.15);
-}
-.file-btn input{display:none}
-.sep{
-  height: 1px;
-  background: rgba(0,0,0,.10);
-  margin: 12px 0;
-}
-.tiny{
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* Toast */
-.toast{
-  border:none;
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: rgba(0,0,0,.82);
-  color: #fff;
-}
-.toast::backdrop{background: transparent}
-
-/* 1画面に収める（カレンダー＋入力欄） */
-:root{
-  --topbarH: 86px;
-  --dowH: 44px;
-  --entryH: 140px;
-}
-
-.dow{ height: var(--dowH); }
-
-.grid-wrap{
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
-  height: calc(100dvh - var(--topbarH) - var(--dowH) - var(--entryH));
-  min-height: 0;
-}
-
-.entry-inline{
-  flex: 0 0 auto;
-  height: var(--entryH);
-  padding: 10px 14px 12px;
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* 曜日色 */
+.dow div:nth-child(1){ color: var(--red); }  /* 日 */
+.dow div:nth-child(7){ color: var(--blue); } /* 土 */
