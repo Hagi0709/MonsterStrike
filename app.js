@@ -17,9 +17,7 @@
   const monthTotalEl = document.getElementById("monthTotal");
 
   const menuBtn = document.getElementById("menuBtn");
-  const fab = document.getElementById("fab");
-
-  const entryDialog = document.getElementById("entryDialog");
+const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const cumInput = document.getElementById("cumInput");
   const previewEl = document.getElementById("preview");
@@ -43,9 +41,17 @@
   document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
 
   // Init
+  function syncInlineOnInit(){
+    // 初期表示でスクロールが動かないように、フォーカス無しで同期
+    selectedDateEl.textContent = selected;
+    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
+    updatePreview();
+  }
+
   const now = new Date();
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   renderNoAnim();
+  syncInlineOnInit();
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
@@ -86,27 +92,23 @@
     viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
     selected = toYMD(t);
     renderNoAnim();
+    syncInlineOnInit();
     menuDialog.close();
   });
-
-  // 仕様：日付を選択 → 右下＋で入力
-  fab.addEventListener("click", () => openEntry(selected));
-
-  saveBtn.addEventListener("click", () => {
+  // 仕様変更：右下＋は使わず、下の入力欄で直接入力
+saveBtn.addEventListener("click", () => {
     const n = normalizeNumber(cumInput.value);
     if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
     if (n === 0) {
       delete cum[selected];
       persist();
       showToast("削除しました");
-      entryDialog.close();
       renderNoAnim();
       return;
     }
     cum[selected] = n;
     persist();
     showToast("保存しました");
-    entryDialog.close();
     renderNoAnim();
   });
 
@@ -115,7 +117,6 @@
     delete cum[selected];
     persist();
     showToast("削除しました");
-    entryDialog.close();
     renderNoAnim();
   });
 
@@ -286,9 +287,10 @@ if (typeof d === "number") {
       cell.addEventListener("click", () => {
         selected = c.ymd;
         renderNoAnim();
+        // 選択日を下の入力欄に反映
+        openEntry(selected);
       });
-
-      targetGrid.appendChild(cell);
+targetGrid.appendChild(cell);
     }
   }
 
@@ -298,9 +300,9 @@ if (typeof d === "number") {
     selectedDateEl.textContent = selected;
     cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
     updatePreview();
-    entryDialog.showModal();
+    /* モーダルは使わない */
     setTimeout(() => cumInput.focus(), 60);
-  }
+}
 
   function updatePreview() {
     const n = normalizeNumber(cumInput.value);
