@@ -120,15 +120,21 @@ body{
 
 /* Day cell */
 .day{
-  min-height: 74px;
+  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
+  min-height: 96px;
   border-radius: 14px;
-  padding: 10px 8px 8px;
+  padding: 10px 6px 10px;
   position: relative;
   cursor: pointer;
   background: transparent;
 
   /* これが無いと中身の最小幅で列が広がる */
   min-width: 0;
+
+  /* 日付＋増加量をセル内で安定して配置 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
@@ -156,9 +162,15 @@ body{
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  margin-top: 6px;
+  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
   width: 100%;
-  text-align:center;
+  height: 36px;
+  margin-top: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
