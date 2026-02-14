@@ -407,27 +407,50 @@
   }
 
   // ---- Fit text (shrink font; keep columns fixed) ----
-  function fitText(el, basePx, minPx){
-    let size = basePx;
-    el.style.fontSize = size + "px";
+function fitText(el, basePx, minPx){
+  // リセット（前回のscaleを消す）
+  el.style.transform = "";
+  el.style.transformOrigin = "center";
+  el.style.fontSize = basePx + "px";
 
-    // 文字数で荒く落とす（高速）
-    const len = (el.textContent || "").length;
-    if (len >= 9)  size = Math.min(size, basePx - 2);
-    if (len >= 11) size = Math.min(size, basePx - 4);
-    if (len >= 13) size = Math.min(size, basePx - 6);
-    if (len >= 15) size = Math.min(size, basePx - 7);
-    size = Math.max(minPx, size);
-    el.style.fontSize = size + "px";
+  const txt = (el.textContent || "").trim();
+  if (!txt) return;
 
-    // 実測で「必ず収まるまで」落とす（列幅は固定のまま）
-    let guard = 0;
-    while (guard < 32 && el.scrollWidth > el.clientWidth && size > minPx){
-      size -= 1;
-      el.style.fontSize = size + "px";
-      guard++;
+  // iOS Safariで計測がズレるのを避ける（強制レイアウト）
+  // eslint-disable-next-line no-unused-expressions
+  el.offsetWidth;
+
+  const fits = (size) => {
+    el.style.fontSize = size + "px";
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+    return el.scrollWidth <= el.clientWidth;
+  };
+
+  // 二分探索で「収まる最大フォント」を探す
+  let low = minPx, high = basePx, best = minPx;
+
+  if (fits(high)) {
+    best = high;
+  } else {
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      if (fits(mid)) { best = mid; low = mid + 1; }
+      else { high = mid - 1; }
     }
   }
+
+  el.style.fontSize = best + "px";
+  // eslint-disable-next-line no-unused-expressions
+  el.offsetWidth;
+
+  // それでも収まらない場合は scaleX で最後に押し込む（列幅固定のまま）
+  if (el.scrollWidth > el.clientWidth) {
+    const ratio = el.clientWidth / el.scrollWidth;
+    const scale = Math.max(0.72, Math.min(1, ratio));
+    el.style.transform = `scaleX(${scale})`;
+  }
+}
 
   // ---- Utils ----
   function toYMD(date) {
