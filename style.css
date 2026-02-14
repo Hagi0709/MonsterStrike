@@ -61,6 +61,13 @@ body{
   color: var(--headerText);
   letter-spacing: .02em;
 }
+.month-gain{
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--headerText);
+  opacity: .92;
+  letter-spacing: .02em;
+}
 .top-icon{
   appearance:none;
   border:none;
@@ -419,3 +426,27 @@ body{
   color: #fff;
 }
 .toast::backdrop{background: transparent}
+/* 1画面に収める（カレンダー6行固定） */
+:root{
+  --topbarH: 86px;
+  --dowH: 44px;
+  --entryH: 150px;
+}
+
+.dow{ height: var(--dowH); }
+
+.grid-wrap{
+  /* 6行が確実に見えるように、入力欄ぶんを差し引いて高さを固定 */
+  flex: 0 0 auto;
+  height: calc(100dvh - var(--topbarH) - var(--dowH) - var(--entryH));
+}
+
+.entry-inline{
+  flex: 0 0 auto;
+  padding: 10px 14px 18px;
+  height: var(--entryH);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+}
