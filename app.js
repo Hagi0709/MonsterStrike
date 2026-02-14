@@ -9,6 +9,7 @@
   /** @type {{rank:number,xp:number}[]} ランクテーブル（csv: 左=ランク, 右=累計経験値） */
   let rankTable = [];
   let rankTableReady = false;
+  let rankXpMap = new Map();
 
   async function loadRankTable(){
     try{
@@ -28,54 +29,7 @@
       // rank -> xp（累計）に正規化
       const rankXp = new Map();
 
-let targetRank = Number(localStorage.getItem("targetRank") || 0) || 0;
-
-function formatComma(n){
-  if(!Number.isFinite(n)) return "--";
-  return Math.trunc(n).toLocaleString("ja-JP");
-}
-
-function getCumXPByRank(r){
-  if(!Number.isFinite(r) || r<=0) return null;
-  // rankXpは「ランク->累計EXP」のMap（CSV+補完）
-  const v = rankXp.get(r);
-  return Number.isFinite(v) ? v : null;
-}
-
-function updateTargetUI(currentCumXP){
-  if(!targetLabelEl || !targetNeedEl) return;
-  if(!targetRank){
-    targetLabelEl.textContent = "目標 --";
-    targetNeedEl.textContent = "必要EXP --";
-    return;
-  }
-  targetLabelEl.textContent = `目標 ${targetRank}`;
-  const targetCum = getCumXPByRank(targetRank);
-  if(targetCum == null || !Number.isFinite(currentCumXP)){
-    targetNeedEl.textContent = "必要EXP --";
-    return;
-  }
-  const need = Math.max(0, targetCum - currentCumXP);
-  targetNeedEl.textContent = `必要EXP ${formatComma(need)}`;
-}
-
-function promptTargetRank(){
-  const cur = targetRank ? String(targetRank) : "";
-  const input = prompt("目標ランクを入力してください（例: 3000）", cur);
-  if(input == null) return;
-  const v = Number(String(input).replace(/[^\d]/g,""));
-  if(!Number.isFinite(v) || v<=0){
-    targetRank = 0;
-    localStorage.removeItem("targetRank");
-  }else{
-    targetRank = Math.floor(v);
-    localStorage.setItem("targetRank", String(targetRank));
-  }
-  // 画面更新はrender側で行うが、即時も更新
-  updateTargetUI(currentCumXPGlobal || 0);
-}
-
-      for (const row of rows) {
+for (const row of rows) {
         rankXp.set(Math.floor(row.rank), Math.floor(row.xp));
       }
       // ---- 規則性による補完 ----
@@ -152,6 +106,7 @@ function promptTargetRank(){
         .sort((a, b) => a.xp - b.xp);
 
       rankTableReady = rankTable.length > 0;
+      rankXpMap = new Map(rankXp);
     } catch (e) {
       console.error("rank_table.csv 読み込み失敗", e);
       rankTable = [];
@@ -188,6 +143,52 @@ function promptTargetRank(){
   // Elements
   let targetBtn=null, targetLabelEl=null, targetNeedEl=null;
 
+  // ---- Target Rank ----
+  let targetRank = Number(localStorage.getItem("targetRank") || 0) || 0;
+
+  function formatComma(n){
+    if(!Number.isFinite(n)) return "--";
+    return Math.trunc(n).toLocaleString("ja-JP");
+  }
+
+  function getCumXPByRank(r){
+    if(!Number.isFinite(r) || r<=0) return null;
+    const v = rankXpMap.get(Math.floor(r));
+    return Number.isFinite(v) ? v : null;
+  }
+
+  function updateTargetUI(currentCumXP){
+    if(!targetLabelEl || !targetNeedEl) return;
+    if(!targetRank){
+      targetLabelEl.textContent = "目標 --";
+      targetNeedEl.textContent = "必要EXP --";
+      return;
+    }
+    targetLabelEl.textContent = `目標 ${targetRank}`;
+    const targetCum = getCumXPByRank(targetRank);
+    if(targetCum == null || !Number.isFinite(currentCumXP)){
+      targetNeedEl.textContent = "必要EXP --";
+      return;
+    }
+    const need = Math.max(0, targetCum - currentCumXP);
+    targetNeedEl.textContent = `必要EXP ${formatComma(need)}`;
+  }
+
+  function promptTargetRank(){
+    const cur = targetRank ? String(targetRank) : "";
+    const input = prompt("目標ランクを入力してください（例: 3000）", cur);
+    if(input == null) return;
+    const v = Number(String(input).replace(/[^\d]/g,""));
+    if(!Number.isFinite(v) || v<=0){
+      targetRank = 0;
+      localStorage.removeItem("targetRank");
+    }else{
+      targetRank = Math.floor(v);
+      localStorage.setItem("targetRank", String(targetRank));
+    }
+    updateTargetUI(currentCumXPGlobal || 0);
+  }
+
   const monthLabel = document.getElementById("monthLabel");
   const gridWrap = document.getElementById("gridWrap");
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
@@ -198,6 +199,10 @@ function promptTargetRank(){
 const entryDialog = document.getElementById("entryDialog");
   const selectedDateEl = document.getElementById("selectedDate");
   const cumInput = document.getElementById("cumInput");
+
+  targetBtn = document.getElementById("targetBtn");
+  targetLabelEl = document.getElementById("targetLabel");
+  targetNeedEl = document.getElementById("targetNeed");
 
   const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
@@ -649,8 +654,7 @@ function applyFits(scopeEl){
     fitText(el,10,6,"+XXX,XXX,XXX");
   });
 }
-);
-}
+
 
 function calcFitFont(el, basePx, minPx, templateStr){
   const cs = getComputedStyle(el);
