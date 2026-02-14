@@ -302,16 +302,16 @@ function renderNoAnim() {
       cell.appendChild(dn);
 
       // ランク表示（累計EXPが入力されている日だけ表示）
-      const rk = document.createElement(\"div\");
-      rk.className = \"rank\";
+      const rk = document.createElement("div");
+      rk.className = "rank";
       const cv = cumulativeMap ? cumulativeMap[c.ymd] : null;
-      if (rankTableReady && typeof cv === \"number\") {
+      if (rankTableReady && typeof cv === "number") {
         const r = getRankFromXP(cv);
-        rk.textContent = r != null ? `Lv.${r}` : \"\";
+        rk.textContent = r != null ? `Lv.${r}` : "";
       } else {
         // 高さ固定のためvisibilityで隠す
-        rk.style.visibility = \"hidden\";
-        rk.textContent = \"Lv.0\";
+        rk.style.visibility = "hidden";
+        rk.textContent = "Lv.0";
       }
       cell.appendChild(rk);
 
