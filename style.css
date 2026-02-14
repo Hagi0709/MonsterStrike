@@ -202,10 +202,9 @@
 
 
   .day.selected{ background: var(--select); }
-  .day.today:not(.selected){ background: var(--today); }
+  .day.today:not(.selected){ background: none; }
 
   /* 日曜日は赤（今日オレンジ優先） */
-  .day
   .day.today .dnum{ color: var(--orange); }
 
   /* 日付：小さく、細く */
