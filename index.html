@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="topbar">
-    <!-- 左の非表示ボタンは削除： 中央タイトルのセンター維持用スペーサー -->
+    <!-- 左の非表示ボタンは削除：中央タイトルのセンター維持用スペーサー -->
     <div class="top-spacer" aria-hidden="true"></div>
 
     <div class="top-title">
@@ -40,28 +40,43 @@
     </div>
   </div>
 
-  <!-- 直接入力バー（下のスペースで入力） -->
-  <div class="inline-entry" aria-label="直接入力">
-    <div class="inline-top">
-      <div class="inline-date">
-        <span class="inline-label">日付</span>
-        <span id="selectedDate" class="inline-value">----</span>
+  <!-- FAB -->
+  <button id="fab" class="fab" aria-label="追加">＋</button>
+
+  <!-- entry modal -->
+  <dialog id="entryDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="entryForm">
+      <div class="dialog-head">
+        <div class="dialog-title">累計経験値の入力</div>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
       </div>
-      <div id="preview" class="inline-preview">--</div>
-    </div>
 
-    <div class="inline-mid">
-      <input id="cumInput" class="input inline-input" inputmode="numeric" placeholder="例: 123456789" />
-      <div class="help inline-help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
-    </div>
+      <div class="dialog-body">
+        <div class="row">
+          <div class="label">日付</div>
+          <div id="selectedDate" class="value">----</div>
+        </div>
 
-    <div class="dialog-actions inline-actions">
-      <button id="deleteBtn" class="btn danger" type="button">削除</button>
-      <button id="saveBtn" class="btn primary" type="button">保存</button>
-    </div>
-  </div>
+        <div class="row">
+          <label class="label" for="cumInput">その日の時点での累計経験値</label>
+          <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
+          <div class="help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
+        </div>
 
-<!-- menu modal -->
+        <div class="row mini">
+          <div class="label">計算プレビュー</div>
+          <div id="preview" class="preview">--</div>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button id="deleteBtn" class="btn danger" value="noop" type="button">削除</button>
+        <button id="saveBtn" class="btn primary" value="noop" type="button">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- menu modal -->
   <dialog id="menuDialog" class="dialog">
     <form method="dialog" class="dialog-card">
       <div class="dialog-head">
