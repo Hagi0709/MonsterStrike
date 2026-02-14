@@ -55,7 +55,9 @@
         const d2000 = xp2000 - xp1999; // 1999->2000 に必要な経験値
         const step2000 = d2000 * 3;
 
-        for (let r = 2001; r <= 2500; r++) {
+        const MAX_RANK = 20000;
+
+        for (let r = 2001; r <= MAX_RANK; r++) {
           if (!rankXp.has(r)) {
             rankXp.set(r, xp2000 + (r - 2000) * step2000);
           }
@@ -301,9 +303,8 @@ const entryDialog = document.getElementById("entryDialog");
 
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
-    fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
-    if (cumTotalEl) fitText(cumTotalEl, 18, 12, "累計EXP 9,999,999,999");
-  });
+    syncHeaderFont();
+});
 
   const cleanup = () => {
     try { calendarGrid.remove(); } catch {}
@@ -327,9 +328,8 @@ function renderNoAnim() {
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
-    fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
-    if (cumTotalEl) fitText(cumTotalEl, 18, 12, "累計EXP 9,999,999,999");
-  });
+    syncHeaderFont();
+});
 }
 
   // ---- Grid fill ----
@@ -410,6 +410,7 @@ targetGrid.appendChild(cell);
     const deltaMap = buildDeltaMap(cum);
     monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
     if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
+    requestAnimationFrame(syncHeaderFont);
 }
 
 
@@ -527,6 +528,27 @@ targetGrid.appendChild(cell);
     }
     try { inputEl.setSelectionRange(pos, pos); } catch {}
   }
+
+
+function syncHeaderFont(){
+  // 「累計EXP」と「獲得EXP」を同じ文字サイズに固定しつつ、
+  // 1行に収まる範囲で少し小さめにする
+  const base = 16;
+  const min  = 10;
+
+  // monthTotalEl を基準に計算（幅は同じレイアウトなので、同じサイズを適用）
+  const best = calcFitFont(monthTotalEl, base, min, "獲得EXP 9,999,999,999");
+
+  monthTotalEl.style.transform = "";
+  monthTotalEl.style.transformOrigin = "center";
+  monthTotalEl.style.fontSize = best + "px";
+
+  if (cumTotalEl) {
+    cumTotalEl.style.transform = "";
+    cumTotalEl.style.transformOrigin = "center";
+    cumTotalEl.style.fontSize = best + "px";
+  }
+}
 
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
