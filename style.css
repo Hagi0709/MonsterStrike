@@ -91,15 +91,24 @@ body{
 .grid-wrap{
   position: relative;
   overflow: hidden;
-  padding: 10px 14px 20px;
+
+  /* 7列の「1列あたり横幅」を稼ぐ（枠いっぱいに寄せる） */
+  padding: 8px 8px 20px;
+
   min-height: 420px;
 }
 .grid{
   position: absolute;
-  inset: 10px 14px 20px 14px;
+
+  /* 左右の余白を削って列幅を広げる */
+  inset: 8px 8px 20px 8px;
+
   display:grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
-  gap: 18px 8px;
+
+  /* 横gapを小さくして、さらに列幅を稼ぐ */
+  gap: 18px 4px;
+
   will-change: transform, opacity;
 }
 .grid-current{ opacity: 1; transform: translateX(0); }
@@ -111,21 +120,15 @@ body{
 
 /* Day cell */
 .day{
-  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
-  min-height: 96px;
+  min-height: 74px;
   border-radius: 14px;
-  padding: 10px 6px 10px;
+  padding: 10px 8px 8px;
   position: relative;
   cursor: pointer;
   background: transparent;
 
   /* これが無いと中身の最小幅で列が広がる */
   min-width: 0;
-
-  /* 日付＋増加量をセル内で安定して配置 */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
