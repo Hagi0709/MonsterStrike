@@ -76,50 +76,38 @@ body{
 }
 
 /* Screen */
-.screen{
-  /* 横余白を完全解放 */
-  padding: 0;
-  padding-bottom: 120px;
-}
+.screen{ padding-bottom: 240px; }
 
 .dow{
   display:grid;
   grid-template-columns: repeat(7,minmax(0,1fr));
-
-  /* 左右余白を削って列幅を稼ぐ（端末の安全領域は最低限だけ確保） */
-  padding: 12px max(6px, env(safe-area-inset-left)) 8px;
-
+  padding: 12px 14px 8px;
   color: var(--muted);
   font-size: 14px;
 }
 .dow > div{ text-align:center; }
 
 /* スライド用枠 */
-.grid{
-  position: absolute;
+.grid-wrap{
+  position: relative;
+  overflow: hidden;
 
-  /* 左右を完全フル幅へ */
-  inset: 8px 0 20px 0;
+  /* 7列の「1列あたり横幅」を稼ぐ（枠いっぱいに寄せる） */
+  padding: 8px 8px 20px;
 
-  display:grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-
-  /* 横gapも削って列をさらに太く */
-  gap: 18px 0;
-
-  will-change: transform, opacity;
+  min-height: 420px;
 }
 .grid{
   position: absolute;
 
-  /* 左右を完全フル幅へ */
-  inset: 8px 0 20px 0;
+  /* 左右の余白を削って列幅を広げる */
+  inset: 8px 8px 20px 8px;
 
   display:grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
 
-  /* 横gapも削って列をさらに太く */
-  gap: 18px 0;
+  /* 横gapを小さくして、さらに列幅を稼ぐ */
+  gap: 18px 4px;
 
   will-change: transform, opacity;
 }
@@ -132,12 +120,10 @@ body{
 
 /* Day cell */
 .day{
-  min-height: 74px;
+  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
+  min-height: 96px;
   border-radius: 14px;
-
-  /* 左右paddingを削って"数字の横幅"を確保（列幅固定のまま見やすく） */
-  padding: 10px 4px 8px;
-
+  padding: 10px 6px 10px;
   position: relative;
   cursor: pointer;
   background: transparent;
@@ -154,8 +140,8 @@ body{
 .day:active{ transform: translateY(1px); }
 
 .day.out{
-  opacity: .25;
-  pointer-events: none;
+  opacity: .38;
+  pointer-events: auto;
 }
 
 .day.selected{ background: var(--select); }
@@ -176,27 +162,24 @@ body{
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  /* 列幅いっぱいまで使用 */
-  width: calc(100% + 6px);
-  margin-left: -3px;
-
+  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
+  width: 100%;
   height: 36px;
   margin-top: 6px;
 
-  display: block;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   font-weight: 900;
-  font-size: var(--expFontPx, 18px);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   color: var(--blue);
 
+  min-width: 0;
   white-space: nowrap;
-  overflow: visible;
-
-  will-change: transform;
+  overflow: hidden; /* はみ出しは縮小で解決 */
 }
 .exp.neg{ color: var(--red); }
 
@@ -235,24 +218,8 @@ body{
   overflow: hidden;
 }
 
-/* FAB */
-.fab{
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  width: 62px;
-  height: 62px;
-  border-radius: 999px;
-  border: none;
-  background: var(--fab);
-  color: rgba(0,0,0,.55);
-  font-size: 34px;
-  font-weight: 900;
-  box-shadow: var(--fabShadow);
-  cursor:pointer;
-  z-index: 10;
-}
-.fab:active{ transform: translateY(1px); }
+/* FABは廃止（直接入力へ） */
+.fab{ display:none; }
 
 /* Dialogs */
 .dialog{
@@ -385,3 +352,51 @@ body{
   color: #fff;
 }
 .toast::backdrop{background: transparent}
+
+/* 直接入力バー */
+.inline-entry{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 96px; /* total-pillの上に置く */
+  padding: 10px 12px;
+  background: rgba(255,255,255,.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(0,0,0,.08);
+  z-index: 9;
+}
+.inline-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.inline-date{
+  display:flex;
+  align-items:baseline;
+  gap: 8px;
+}
+.inline-label{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.inline-value{
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.inline-preview{
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+.inline-mid{ margin-bottom: 8px; }
+.inline-input{ font-size: 18px; }
+.inline-help{ margin-top: 6px; }
+.inline-actions{ padding-top: 0; }
+
