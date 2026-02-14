@@ -186,15 +186,13 @@ body{
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  /* 列幅いっぱいまで使用 */
-  width: calc(100% + 6px);
-  margin-left: -3px;
-
+  width: 100%;
   height: 36px;
   margin-top: 6px;
 
-  display: block;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   font-weight: 900;
   font-size: var(--expFontPx, 18px);
