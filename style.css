@@ -176,30 +176,26 @@ body{
 
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
-  width: 100%;
+  /* 列幅いっぱいまで使用 */
+  width: calc(100% + 6px);
+  margin-left: -3px;
+
   height: 36px;
   margin-top: 6px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  text-align: center;
 
   font-weight: 900;
-  font-size: var(--expFontPx, 10px);
+  font-size: var(--expFontPx, 18px);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
   color: var(--blue);
 
-  min-width: 0;
   white-space: nowrap;
+  overflow: visible;
 
-  /* iOSの端1px欠け対策：超わずかに内側へ */
-  padding: 0 1px;
-  overflow: hidden;
-
-  /* transformで詰めるので描画安定化 */
   will-change: transform;
 }
 .exp.neg{ color: var(--red); }
