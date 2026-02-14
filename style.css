@@ -206,6 +206,18 @@ body{
   min-width: 0;
 }
 
+/* ランク表示（増加量の上） */
+.rank{
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
   width: 100%;
