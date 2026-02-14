@@ -26,6 +26,54 @@
 
       // rank -> xp（累計）に正規化
       const rankXp = new Map();
+
+let targetRank = Number(localStorage.getItem("targetRank") || 0) || 0;
+
+function formatComma(n){
+  if(!Number.isFinite(n)) return "--";
+  return Math.trunc(n).toLocaleString("ja-JP");
+}
+
+function getCumXPByRank(r){
+  if(!Number.isFinite(r) || r<=0) return null;
+  // rankXpは「ランク->累計EXP」のMap（CSV+補完）
+  const v = rankXp.get(r);
+  return Number.isFinite(v) ? v : null;
+}
+
+function updateTargetUI(currentCumXP){
+  if(!targetLabelEl || !targetNeedEl) return;
+  if(!targetRank){
+    targetLabelEl.textContent = "目標 --";
+    targetNeedEl.textContent = "必要EXP --";
+    return;
+  }
+  targetLabelEl.textContent = `目標 ${targetRank}`;
+  const targetCum = getCumXPByRank(targetRank);
+  if(targetCum == null || !Number.isFinite(currentCumXP)){
+    targetNeedEl.textContent = "必要EXP --";
+    return;
+  }
+  const need = Math.max(0, targetCum - currentCumXP);
+  targetNeedEl.textContent = `必要EXP ${formatComma(need)}`;
+}
+
+function promptTargetRank(){
+  const cur = targetRank ? String(targetRank) : "";
+  const input = prompt("目標ランクを入力してください（例: 3000）", cur);
+  if(input == null) return;
+  const v = Number(String(input).replace(/[^\d]/g,""));
+  if(!Number.isFinite(v) || v<=0){
+    targetRank = 0;
+    localStorage.removeItem("targetRank");
+  }else{
+    targetRank = Math.floor(v);
+    localStorage.setItem("targetRank", String(targetRank));
+  }
+  // 画面更新はrender側で行うが、即時も更新
+  updateTargetUI(currentCumXPGlobal || 0);
+}
+
       for (const row of rows) {
         rankXp.set(Math.floor(row.rank), Math.floor(row.xp));
       }
@@ -328,6 +376,9 @@ const entryDialog = document.getElementById("entryDialog");
   // 合計更新（その月の増加合計）
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
+      currentCumXPGlobal = cumTotal;
+      updateTargetUI(cumTotal);
+
 
   requestAnimationFrame(() => {
     newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
@@ -590,7 +641,9 @@ function applyFits(scopeEl){
     // 自動で全文表示できるようfitTextを使用
     fitText(el,10,6,"+XXX,XXX,XXX");
   });
+});
 }
+
 function calcFitFont(el, basePx, minPx, templateStr){
   const cs = getComputedStyle(el);
   const family = cs.fontFamily || "system-ui";
@@ -703,7 +756,7 @@ function fitText(el, basePx, minPx, templateStr){
   function formatJPDate(ymd){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
   const [y,m,d] = ymd.split("-");
-  return `${Number(m)}月${Number(d)}日`;
+  return `${Number(m)}月${Number(d)}日に`;
 }
 
 // ---- Utils ----
@@ -746,3 +799,6 @@ function formatSignedInt(n) {
     showToast._t = setTimeout(() => { try { toast.close(); } catch {} }, 1100);
   }
 })();
+let currentCumXPGlobal = 0;
+
+if(targetBtn){ targetBtn.addEventListener("click", promptTargetRank); }
