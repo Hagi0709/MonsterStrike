@@ -128,7 +128,7 @@
   exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
-      version: 5,
+      version: 4,
       exportedAt: new Date().toISOString(),
       cumulative: cum
     };
@@ -216,11 +216,12 @@
       calendarGrid = newGrid;
       animating = false;
     };
+
     newGrid.addEventListener("transitionend", cleanup, { once: true });
 
-    // 合計更新（その月の増加合計）
+    // 合計更新
     monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
-    fitText(monthTotalEl, 22, 14);
+    fitText(monthTotalEl, 22, 12);
   }
 
   function renderNoAnim() {
@@ -232,7 +233,7 @@
     fillGrid(calendarGrid, viewDate, deltaMap);
 
     monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
-    fitText(monthTotalEl, 22, 14);
+    fitText(monthTotalEl, 22, 12);
   }
 
   // ---- Grid fill ----
@@ -245,8 +246,8 @@
       cell.className = "day";
 
       if (c.out) cell.classList.add("out");
-      if (c.dow === 0) cell.classList.add("sun");
       if (c.ymd === todayYMD) cell.classList.add("today");
+      if (c.dow === 0) cell.classList.add("sun");
       if (c.ymd === selected) cell.classList.add("selected");
 
       const dn = document.createElement("div");
@@ -261,7 +262,7 @@
       if (typeof d === "number") {
         if (d < 0) exp.classList.add("neg");
         exp.textContent = formatSignedInt(d);
-        fitText(exp, 16, 6); // 収まるまで縮小
+        fitText(exp, 16, 4); // 自動縮小
       } else {
         exp.style.visibility = "hidden";
         exp.textContent = "0";
@@ -408,24 +409,46 @@
 
   // ---- Fit text (shrink font; keep columns fixed) ----
   function fitText(el, basePx, minPx){
-    let size = basePx;
-    el.style.fontSize = size + "px";
+    // まずリセット
+    el.style.transform = "";
+    el.style.transformOrigin = "center";
+    el.style.fontSize = basePx + "px";
 
-    // 文字数で荒く落とす（高速）
-    const len = (el.textContent || "").length;
-    if (len >= 9)  size = Math.min(size, basePx - 2);
-    if (len >= 11) size = Math.min(size, basePx - 4);
-    if (len >= 13) size = Math.min(size, basePx - 6);
-    if (len >= 15) size = Math.min(size, basePx - 7);
-    size = Math.max(minPx, size);
-    el.style.fontSize = size + "px";
+    const txt = (el.textContent || "").trim();
+    if (!txt) return;
 
-    // 実測で「必ず収まるまで」落とす（列幅は固定のまま）
-    let guard = 0;
-    while (guard < 32 && el.scrollWidth > el.clientWidth && size > minPx){
-      size -= 1;
+    // iOS Safariで計測がズレるのを避ける
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+
+    const fits = (size) => {
       el.style.fontSize = size + "px";
-      guard++;
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetWidth;
+      return el.scrollWidth <= el.clientWidth;
+    };
+
+    // 二分探索で「収まる最大フォント」を探す
+    let low = minPx, high = basePx, best = minPx;
+
+    if (fits(high)) best = high;
+    else {
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (fits(mid)) { best = mid; low = mid + 1; }
+        else { high = mid - 1; }
+      }
+    }
+
+    el.style.fontSize = best + "px";
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+
+    // それでもダメなら scaleX で最後の一押し（列幅は固定のまま）
+    if (el.scrollWidth > el.clientWidth) {
+      const ratio = el.clientWidth / el.scrollWidth;
+      const scale = Math.max(0.72, Math.min(1, ratio));
+      el.style.transform = `scaleX(${scale})`;
     }
   }
 
