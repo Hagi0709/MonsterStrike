@@ -1,113 +1,110 @@
-  <!doctype html>
-  <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <!-- ズーム禁止 -->
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-    <title>モンスト EXPカレンダー</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <!-- 左側は余白（中央タイトルのセンタリング維持） -->
-      <div class="top-spacer" aria-hidden="true"></div>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>モンスト EXPカレンダー</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="muteBtn" class="top-icon" aria-label="表示切替">
+      <span class="icon">🔕</span>
+    </button>
 
-      <div class="top-title">
-        <div class="month" id="monthLabel">----</div>
-      </div>
-
-      <button id="menuBtn" class="top-icon" aria-label="メニュー">
-        <span class="icon">✎</span>
-      </button>
-    </header>
-
-    <main class="screen">
-      <div class="dow">
-        <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
-      </div>
-
-      <!-- スライドアニメ用の枠 -->
-      <div id="gridWrap" class="grid-wrap" aria-label="カレンダー">
-        <div id="calendarGrid" class="grid grid-current"></div>
-      </div>
-    </main>
-
-    <!-- bottom total pill -->
-    <div class="total-wrap" aria-hidden="false">
-      <div class="total-pill">
-        <span class="yen">EXP</span>
-        <span id="monthTotal" class="total-num">0</span>
-      </div>
+    <div class="top-title">
+      <div class="month" id="monthLabel">----</div>
     </div>
 
-    <!-- FAB -->
-    <button id="fab" class="fab" aria-label="追加">＋</button>
+    <button id="menuBtn" class="top-icon" aria-label="メニュー">
+      <span class="icon">✎</span>
+    </button>
+  </header>
 
-    <!-- entry modal -->
-    <dialog id="entryDialog" class="dialog">
-      <form method="dialog" class="dialog-card" id="entryForm">
-        <div class="dialog-head">
-          <div class="dialog-title">累計経験値の入力</div>
-          <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+  <main class="screen">
+    <div class="dow">
+      <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+    </div>
+
+    <div id="calendarGrid" class="grid" aria-label="カレンダー"></div>
+  </main>
+
+  <!-- bottom total pill -->
+  <div class="total-wrap" aria-hidden="false">
+    <div class="total-pill">
+      <span class="yen">EXP</span>
+      <span id="monthTotal" class="total-num">0</span>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button id="fab" class="fab" aria-label="追加">＋</button>
+
+  <!-- entry modal -->
+  <dialog id="entryDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="entryForm">
+      <div class="dialog-head">
+        <div class="dialog-title">累計経験値の入力</div>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="dialog-body">
+        <div class="row">
+          <div class="label">日付</div>
+          <div id="selectedDate" class="value">----</div>
         </div>
 
-        <div class="dialog-body">
-          <div class="row">
-            <div class="label">日付</div>
-            <div id="selectedDate" class="value">----</div>
-          </div>
-
-          <div class="row">
-            <label class="label" for="cumInput">その日の時点での累計経験値</label>
-            <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
-            <div class="help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
-          </div>
-
-          <div class="row mini">
-            <div class="label">計算プレビュー</div>
-            <div id="preview" class="preview">—</div>
-          </div>
+        <div class="row">
+          <label class="label" for="cumInput">その日の時点での累計経験値</label>
+          <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
+          <div class="help">保存すると、前回記録からの増加量を自動計算してカレンダーに表示します。0で削除。</div>
         </div>
 
-        <div class="dialog-actions">
-          <button id="deleteBtn" class="btn danger" value="noop" type="button">削除</button>
-          <button id="saveBtn" class="btn primary" value="noop" type="button">保存</button>
+        <div class="row mini">
+          <div class="label">計算プレビュー</div>
+          <div id="preview" class="preview">—</div>
         </div>
-      </form>
-    </dialog>
+      </div>
 
-    <!-- menu modal -->
-    <dialog id="menuDialog" class="dialog">
-      <form method="dialog" class="dialog-card">
-        <div class="dialog-head">
-          <div class="dialog-title">メニュー</div>
-          <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      <div class="dialog-actions">
+        <button id="deleteBtn" class="btn danger" value="noop" type="button">削除</button>
+        <button id="saveBtn" class="btn primary" value="noop" type="button">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- menu modal -->
+  <dialog id="menuDialog" class="dialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <div class="dialog-title">メニュー</div>
+        <button class="dialog-close" value="cancel" aria-label="閉じる">×</button>
+      </div>
+
+      <div class="dialog-body menu">
+        <button id="todayBtn" class="menu-btn" type="button">今日へ</button>
+        <div class="menu-row">
+          <button id="prevBtn" class="menu-btn" type="button">前の月</button>
+          <button id="nextBtn" class="menu-btn" type="button">次の月</button>
         </div>
 
-        <div class="dialog-body menu">
-          <button id="todayBtn" class="menu-btn" type="button">今日へ</button>
-          <div class="menu-row">
-            <button id="prevBtn" class="menu-btn" type="button">前の月</button>
-            <button id="nextBtn" class="menu-btn" type="button">次の月</button>
-          </div>
+        <div class="sep"></div>
 
-          <div class="sep"></div>
+        <button id="exportBtn" class="menu-btn" type="button">エクスポート</button>
+        <label class="menu-btn file-btn">
+          インポート
+          <input id="importInput" type="file" accept="application/json" />
+        </label>
 
-          <button id="exportBtn" class="menu-btn" type="button">エクスポート</button>
-          <label class="menu-btn file-btn">
-            インポート
-            <input id="importInput" type="file" accept="application/json" />
-          </label>
+        <div class="sep"></div>
 
-          <div class="sep"></div>
+        <button id="wipeBtn" class="menu-btn danger" type="button">全データ削除</button>
+        <div class="tiny">保存先: この端末のブラウザ（localStorage）</div>
+      </div>
+    </form>
+  </dialog>
 
-          <button id="wipeBtn" class="menu-btn danger" type="button">全データ削除</button>
-          <div class="tiny">保存先: この端末のブラウザ（localStorage）</div>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="toast" class="toast" aria-live="polite"></dialog>
-    <script src="app.js"></script>
-  </body>
-  </html>
+  <dialog id="toast" class="toast" aria-live="polite"></dialog>
+  <script src="app.js"></script>
+</body>
+</html>
