@@ -159,8 +159,14 @@ for (const row of rows) {
 
   function setRingProgress(pct){
     if(!targetRingEl || !targetPctEl) return;
+
     const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
-    targetPctEl.textContent = Math.round(clamped) + "%";
+
+    // 0%に見えて固定化したように感じるのを防ぐ（小さい進捗は小数で表示）
+    let label;
+    if (clamped > 0 && clamped < 1) label = clamped.toFixed(1);
+    else label = String(Math.round(clamped));
+    targetPctEl.textContent = label + "%";
 
     const r = 16;
     const c = 2 * Math.PI * r;
@@ -420,6 +426,15 @@ const entryDialog = document.getElementById("entryDialog");
   // 合計更新（その月の増加合計）
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
+
+    const latestCum = getLatestCumulativeValue(cum);
+    currentCumXPGlobal = latestCum;
+    updateTargetUI(latestCum);
+
+
+  const latestCum = getLatestCumulativeValue(cum);
+  currentCumXPGlobal = latestCum;
+  updateTargetUI(latestCum);
       const latestCum = getLatestCumulativeValue(cum);
       currentCumXPGlobal = latestCum;
       updateTargetUI(latestCum);
@@ -432,6 +447,7 @@ const entryDialog = document.getElementById("entryDialog");
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
     syncHeaderFont();
+    syncTopLeftFont();
 });
 
   const cleanup = () => {
@@ -453,10 +469,16 @@ function renderNoAnim() {
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 
+
+  const latestCum = getLatestCumulativeValue(cum);
+  currentCumXPGlobal = latestCum;
+  updateTargetUI(latestCum);
+
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
     syncHeaderFont();
+    syncTopLeftFont();
 });
 }
 
@@ -538,6 +560,11 @@ targetGrid.appendChild(cell);
     const deltaMap = buildDeltaMap(cum);
     monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
     if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
+
+
+  const latestCum = getLatestCumulativeValue(cum);
+  currentCumXPGlobal = latestCum;
+  updateTargetUI(latestCum);
     requestAnimationFrame(syncHeaderFont);
 }
 
@@ -658,6 +685,27 @@ targetGrid.appendChild(cell);
   }
 
 
+
+function syncTopLeftFont(){
+  // 左上（目標/必要EXP）が長い時に、上部のセンター領域と被らないよう縮小
+  const wrap = document.querySelector(".top-left");
+  if(!wrap) return;
+  const btn = document.getElementById("targetBtn");
+  if(!btn) return;
+
+  const maxW = wrap.clientWidth;
+  btn.style.fontSize = ""; // reset
+
+  // ざっくり縮小（12px→9px）
+  let size = 12;
+  while (size >= 9) {
+    btn.style.fontSize = size + "px";
+    // eslint-disable-next-line no-unused-expressions
+    btn.offsetWidth;
+    if (btn.scrollWidth <= maxW) break;
+    size--;
+  }
+}
 function syncHeaderFont(){
   // 「累計EXP」と「獲得EXP」を同じ文字サイズに固定しつつ、
   // 1行に収まる範囲で少し小さめにする
