@@ -31,19 +31,19 @@
     <div id="gridWrap" class="grid-wrap" aria-label="カレンダー">
       <div id="calendarGrid" class="grid grid-current"></div>
     </div>
-  </main>
-  <!-- FABは廃止（下の直接入力） -->
-<!-- 下のスペースで直接入力（モーダル無し） -->
-  
-  <section class="entry-inline" aria-label="累計経験値入力">
+
+    <section class="entry-inline" aria-label="累計経験値入力">
     <div class="entry-row">
       <div class="entry-label">日付</div>
       <div id="selectedDate" class="entry-date">----</div>
     </div>
-
-    <label class="label" for="cumInput">その日の時点での累計経験値</label>
-    <input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
+<input id="cumInput" class="input" inputmode="numeric" placeholder="例: 123456789" />
   </section>
+  </main>
+  <!-- FABは廃止（下の直接入力） -->
+<!-- 下のスペースで直接入力（モーダル無し） -->
+  
+  
 
   <!-- 互換用：JSが参照しても落ちない空dialog（使わない） -->
   <dialog id="entryDialog" class="dialog" style="display:none"></dialog>
