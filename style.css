@@ -39,28 +39,31 @@
 
   /* Top bar */
   .topbar{
-  position: relative;
-    height: 86px;
-    padding: 16px 14px 12px;
-    padding-left: clamp(120px, 34vw, 170px);
-    background: var(--header);
-    display:flex;
-    align-items:flex-end;
-    justify-content:space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .top-spacer{ width:44px; height:44px; }
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  height: 86px;
+  padding: 16px 14px 12px;
+  background: var(--header);
+
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* left / center / right */
+  align-items: flex-end;
+}
+  .top-spacer{
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+}
   .top-title{
-    display:flex;
-    flex-direction: column;
-    align-items:center;
-    justify-content:flex-end;
-    flex: 1;
-    margin: 0 10px;
-    gap: 2px;
-  }
+  justify-self: center;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 2px;
+}
   .month{
     font-weight: 900;
     font-size: 22px;
@@ -204,7 +207,7 @@
 
 
   .day.selected{ background: var(--select); }
-  .day.today:not(.selected){ background: none; }
+  .day.today:not(.selected){ background: transparent; }
 
   /* 日曜日は赤（今日オレンジ優先） */
   .day.today .dnum{ color: var(--orange); }
@@ -488,11 +491,10 @@
 
 /* 目標ランク（左上） */
 .top-left{
-  position:absolute;
-  left:12px;
-  top:10px;
-  width: calc(clamp(120px, 34vw, 170px) - 24px);
-  max-width: calc(clamp(120px, 34vw, 170px) - 24px);
+  justify-self: start;
+  align-self: flex-start;
+  margin-top: 2px;
+  max-width: 38vw;
   display:flex;
   align-items:flex-start;
 }
@@ -525,4 +527,49 @@
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+}
+
+/* Today: orange outline only / Selected: filled background */
+.day.today{
+  outline: 2px solid var(--orange);
+  outline-offset: -2px;
+  background: transparent;
+}
+.day.today.selected{
+  outline: none;
+  background: var(--select);
+}
+
+/* Progress ring (under 必要EXP) */
+.target-ring-wrap{
+  margin-top: 6px;
+  display:flex;
+  align-items:center;
+  gap: 6px;
+}
+.target-ring{
+  width: 24px;
+  height: 24px;
+  display:block;
+}
+.target-ring .ring-bg{
+  fill: none;
+  stroke: rgba(0,0,0,.18);
+  stroke-width: 4;
+}
+.target-ring .ring-bar{
+  fill: none;
+  stroke: rgba(0,0,0,.65);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 20px 20px;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.target-pct{
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--headerText);
+  white-space: nowrap;
 }
