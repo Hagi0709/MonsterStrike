@@ -591,7 +591,7 @@ function applyFits(scopeEl){
     fitText(el,10,6,"+XXX,XXX,XXX");
   });
 });
-}
+
 
 function calcFitFont(el, basePx, minPx, templateStr){
   const cs = getComputedStyle(el);
