@@ -106,8 +106,8 @@ body{
   display:grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
 
-  /* 横gapを小さくして、さらに列幅を稼ぐ */
-  gap: 18px 4px;
+  /* 横gapをさらに削って「1列あたりの横幅」を稼ぐ（列幅固定のまま） */
+  gap: 18px 2px;
 
   will-change: transform, opacity;
 }
@@ -120,20 +120,24 @@ body{
 
 /* Day cell */
 .day{
-  min-height: 116px; /* 文字を大きくしても見やすい高さに */
+  min-height: 74px;
   border-radius: 14px;
-  padding: 10px 8px 10px;
+
+  /* 左右paddingを削って“数字の横幅”を確保（列幅固定のまま見やすく） */
+  padding: 10px 4px 8px;
+
   position: relative;
   cursor: pointer;
   background: transparent;
 
-  /* 上:日付 / 下:増加量 を“枠いっぱい”使って配置 */
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-
   /* これが無いと中身の最小幅で列が広がる */
   min-width: 0;
+}0;
+
+  /* 日付＋増加量をセル内で安定して配置 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
@@ -152,25 +156,30 @@ body{
 
 /* 日付：小さく、細く */
 .dnum{
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
   text-align:center;
   white-space: nowrap;
   min-width: 0;
 }
 
-/* 増加量：1行で必ず収める（JSで“XXX,XXX,XXX”基準の固定サイズ） */
+/* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  margin-top: auto; /* 下に張り付けて枠を有効活用 */
+  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
   width: 100%;
-  text-align:center;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .01em;
-  color: var(--blue);
+  height: 36px;
+  margin-top: 6px;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 900;
+  font-size: var(--expFontPx, 18px);
   line-height: 1;
-  padding-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--blue);
 
   min-width: 0;
   white-space: nowrap;
