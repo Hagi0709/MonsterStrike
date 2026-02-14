@@ -423,22 +423,13 @@ const entryDialog = document.getElementById("entryDialog");
 
   gridWrap.appendChild(newGrid);
 
-  // 合計更新（その月の増加合計）
+  // 合計更新（その月の増加合計 / 最新累計）
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-
-    const latestCum = getLatestCumulativeValue(cum);
-    currentCumXPGlobal = latestCum;
-    updateTargetUI(latestCum);
-
 
   const latestCum = getLatestCumulativeValue(cum);
   currentCumXPGlobal = latestCum;
   updateTargetUI(latestCum);
-      const latestCum = getLatestCumulativeValue(cum);
-      currentCumXPGlobal = latestCum;
-      updateTargetUI(latestCum);
-
 
   requestAnimationFrame(() => {
     newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
@@ -448,7 +439,7 @@ const entryDialog = document.getElementById("entryDialog");
     applyFits(newGrid);
     syncHeaderFont();
     syncTopLeftFont();
-});
+  });
 
   const cleanup = () => {
     try { calendarGrid.remove(); } catch {}
@@ -469,7 +460,6 @@ function renderNoAnim() {
   monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
   if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 
-
   const latestCum = getLatestCumulativeValue(cum);
   currentCumXPGlobal = latestCum;
   updateTargetUI(latestCum);
@@ -479,7 +469,7 @@ function renderNoAnim() {
     applyFits(calendarGrid);
     syncHeaderFont();
     syncTopLeftFont();
-});
+  });
 }
 
   // ---- Grid fill ----
@@ -556,16 +546,20 @@ targetGrid.appendChild(cell);
 }
 
   function updateRealtime() {
-    selectedDateEl.textContent = formatJPDate(selected);
-    const deltaMap = buildDeltaMap(cum);
-    monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
-    if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
+  selectedDateEl.textContent = formatJPDate(selected);
+  const deltaMap = buildDeltaMap(cum);
 
+  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 
   const latestCum = getLatestCumulativeValue(cum);
   currentCumXPGlobal = latestCum;
   updateTargetUI(latestCum);
-    requestAnimationFrame(syncHeaderFont);
+
+  requestAnimationFrame(() => {
+    syncHeaderFont();
+    syncTopLeftFont();
+  });
 }
 
 
