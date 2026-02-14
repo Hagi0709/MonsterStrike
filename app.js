@@ -607,10 +607,11 @@ function fitText(el, basePx, minPx, templateStr){
   }
 
   function formatInt(n) { return Number(n).toLocaleString("ja-JP"); }
-  function formatSignedInt(n) {
-    const sign = n >= 0 ? "+" : "−";
-    return sign + formatInt(Math.abs(n));
-  }
+function formatSignedInt(n) {
+  // 記号は付けない
+  // 色は .exp / .exp.neg のCSSで制御する
+  return formatInt(Math.abs(n));
+}
 
   function showToast(msg) {
     toast.textContent = msg;
