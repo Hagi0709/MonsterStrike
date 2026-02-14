@@ -76,7 +76,11 @@ body{
 }
 
 /* Screen */
-.screen{ padding-bottom: 120px; }
+.screen{
+  /* 横余白を完全解放 */
+  padding: 0;
+  padding-bottom: 120px;
+}
 
 .dow{
   display:grid;
@@ -91,26 +95,31 @@ body{
 .dow > div{ text-align:center; }
 
 /* スライド用枠 */
-.grid-wrap{
-  position: relative;
-  overflow: hidden;
+.grid{
+  position: absolute;
 
-  /* 7列の「1列あたり横幅」を稼ぐ（枠いっぱいに寄せる） */
-  padding: 8px 8px 20px;
+  /* 左右を完全フル幅へ */
+  inset: 8px 0 20px 0;
 
-  min-height: 420px;
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+
+  /* 横gapも削って列をさらに太く */
+  gap: 18px 0;
+
+  will-change: transform, opacity;
 }
 .grid{
   position: absolute;
 
-  /* 左右の余白を削って列幅を広げる */
-  inset: 8px 8px 20px 8px;
+  /* 左右を完全フル幅へ */
+  inset: 8px 0 20px 0;
 
   display:grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 
-  /* 横gapをさらに削って「1列あたりの横幅」を稼ぐ（列幅固定のまま） */
-  gap: 18px 2px;
+  /* 横gapも削って列をさらに太く */
+  gap: 18px 0;
 
   will-change: transform, opacity;
 }
