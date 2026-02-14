@@ -120,21 +120,20 @@ body{
 
 /* Day cell */
 .day{
-  /* 画像2のように「枠いっぱい」に見えるサイズ感へ */
-  min-height: 96px;
+  min-height: 116px; /* 文字を大きくしても見やすい高さに */
   border-radius: 14px;
-  padding: 10px 6px 10px;
+  padding: 10px 8px 10px;
   position: relative;
   cursor: pointer;
   background: transparent;
 
-  /* これが無いと中身の最小幅で列が広がる */
-  min-width: 0;
-
-  /* 日付＋増加量をセル内で安定して配置 */
+  /* 上:日付 / 下:増加量 を“枠いっぱい”使って配置 */
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+
+  /* これが無いと中身の最小幅で列が広がる */
+  min-width: 0;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
@@ -153,29 +152,25 @@ body{
 
 /* 日付：小さく、細く */
 .dnum{
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   text-align:center;
   white-space: nowrap;
   min-width: 0;
 }
 
-/* 増加量：1行で必ず収める（JSでフォント縮小） */
+/* 増加量：1行で必ず収める（JSで“XXX,XXX,XXX”基準の固定サイズ） */
 .exp{
-  /* 1枠内で「XXX,XXX,XXX」を最大限大きく見せる */
+  margin-top: auto; /* 下に張り付けて枠を有効活用 */
   width: 100%;
-  height: 36px;
-  margin-top: 6px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-weight: 900;
-  line-height: 1;
+  text-align:center;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+  letter-spacing: .01em;
   color: var(--blue);
+
+  line-height: 1;
+  padding-bottom: 2px;
 
   min-width: 0;
   white-space: nowrap;
