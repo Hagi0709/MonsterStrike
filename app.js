@@ -590,9 +590,7 @@ function applyFits(scopeEl){
     // 自動で全文表示できるようfitTextを使用
     fitText(el,10,6,"+XXX,XXX,XXX");
   });
-});
-
-
+}
 function calcFitFont(el, basePx, minPx, templateStr){
   const cs = getComputedStyle(el);
   const family = cs.fontFamily || "system-ui";
