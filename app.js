@@ -62,6 +62,7 @@
   const gridWrap = document.getElementById("gridWrap");
   let calendarGrid = document.getElementById("calendarGrid"); // current grid
   const monthTotalEl = document.getElementById("monthGain");
+  const cumTotalEl = document.getElementById("cumTotal");
 
   const menuBtn = document.getElementById("menuBtn");
 const entryDialog = document.getElementById("entryDialog");
@@ -246,7 +247,8 @@ const entryDialog = document.getElementById("entryDialog");
   gridWrap.appendChild(newGrid);
 
   // 合計更新（その月の増加合計）
-  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 
   requestAnimationFrame(() => {
     newGrid.classList.remove(dir === "next" ? "grid-enter-right" : "grid-enter-left");
@@ -254,7 +256,8 @@ const entryDialog = document.getElementById("entryDialog");
 
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
-    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
+    fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
+    if (cumTotalEl) fitText(cumTotalEl, 14, 10, "累計EXP 9,999,999,999");
   });
 
   const cleanup = () => {
@@ -273,12 +276,14 @@ function renderNoAnim() {
   calendarGrid.innerHTML = "";
   fillGrid(calendarGrid, viewDate, deltaMap, cum);
 
-  monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+  monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+  if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
-    fitText(monthTotalEl, 18, 12, "総獲得EXP 9,999,999,999");
+    fitText(monthTotalEl, 18, 12, "獲得EXP 9,999,999,999");
+    if (cumTotalEl) fitText(cumTotalEl, 14, 10, "累計EXP 9,999,999,999");
   });
 }
 
@@ -307,11 +312,11 @@ function renderNoAnim() {
       const cv = cumulativeMap ? cumulativeMap[c.ymd] : null;
       if (rankTableReady && typeof cv === "number") {
         const r = getRankFromXP(cv);
-        rk.textContent = r != null ? `Lv.${r}` : "";
+        rk.textContent = r != null ? String(r) : "";
       } else {
         // 高さ固定のためvisibilityで隠す
         rk.style.visibility = "hidden";
-        rk.textContent = "Lv.0";
+        rk.textContent = "0";
       }
       cell.appendChild(rk);
 
@@ -358,7 +363,8 @@ targetGrid.appendChild(cell);
   function updateRealtime() {
     selectedDateEl.textContent = selected;
     const deltaMap = buildDeltaMap(cum);
-    monthTotalEl.textContent = `総獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+    monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
+    if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
 }
 
 
@@ -403,6 +409,16 @@ targetGrid.appendChild(cell);
     }
     return s;
   }
+
+  function getLatestCumulativeValue(cumulative){
+    const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+    keys.sort();
+    if (!keys.length) return 0;
+    const lastKey = keys[keys.length - 1];
+    const v = cumulative[lastKey];
+    return (typeof v === "number" && Number.isFinite(v)) ? v : 0;
+  }
+
 
   // ---- Calendar cells ----
   function buildCalendarCells(d) {
