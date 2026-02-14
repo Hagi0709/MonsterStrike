@@ -9,6 +9,7 @@
 
   --blue:#1f75ff;
   --red:#ff3b30;
+  --orange:#ff9500;
 
   --select:#ececec;
   --today:#f6f6f6;
@@ -27,6 +28,7 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Segoe UI", Arial;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
 }
 
 /* Top bar */
@@ -41,6 +43,7 @@ body{
   top: 0;
   z-index: 10;
 }
+.top-spacer{ width:44px; height:44px; }
 .top-title{
   display:flex;
   align-items:flex-end;
@@ -77,19 +80,34 @@ body{
 
 .dow{
   display:grid;
-  grid-template-columns: repeat(7,1fr);
+  grid-template-columns: repeat(7,minmax(0,1fr));
   padding: 12px 14px 8px;
   color: var(--muted);
   font-size: 14px;
 }
 .dow > div{ text-align:center; }
 
-.grid{
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 18px 8px;
+/* スライド用枠 */
+.grid-wrap{
+  position: relative;
+  overflow: hidden;
   padding: 10px 14px 20px;
+  min-height: 420px;
 }
+.grid{
+  position: absolute;
+  inset: 10px 14px 20px 14px;
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 列幅固定 */
+  gap: 18px 8px;
+  will-change: transform, opacity;
+}
+.grid-current{ opacity: 1; transform: translateX(0); }
+.grid-enter-right{ opacity: 0; transform: translateX(18%); }
+.grid-enter-left{ opacity: 0; transform: translateX(-18%); }
+.grid-exit-right{ opacity: 0; transform: translateX(18%); }
+.grid-exit-left{ opacity: 0; transform: translateX(-18%); }
+.grid-anim{ transition: transform 220ms ease, opacity 220ms ease; }
 
 /* Day cell */
 .day{
@@ -99,6 +117,9 @@ body{
   position: relative;
   cursor: pointer;
   background: transparent;
+
+  /* これが無いと中身の最小幅で列が広がる */
+  min-width: 0;
 }
 .day:hover{ background: rgba(0,0,0,.03); }
 .day:active{ transform: translateY(1px); }
@@ -111,21 +132,32 @@ body{
 .day.selected{ background: var(--select); }
 .day.today:not(.selected){ background: var(--today); }
 
+/* 日曜日は赤（今日オレンジ優先） */
+.day.sun .dnum{ color: var(--red); }
+.day.today .dnum{ color: var(--orange); }
+
+/* 日付：小さく、細く */
 .dnum{
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 600;
   text-align:center;
+  white-space: nowrap;
+  min-width: 0;
 }
 
+/* 増加量：1行で必ず収める（JSでフォント縮小） */
 .exp{
-  margin-top: 7px;
+  margin-top: 8px;
+  width: 100%;
   text-align:center;
-  font-size: 16px;
   font-weight: 800;
-  line-height: 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+  letter-spacing: .01em;
   color: var(--blue);
+
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden; /* はみ出しは縮小で解決 */
 }
 .exp.neg{ color: var(--red); }
 
@@ -158,8 +190,10 @@ body{
 .total-num{
   font-weight: 900;
   color: var(--blue);
-  font-size: 22px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* FAB */
