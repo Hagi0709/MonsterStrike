@@ -232,7 +232,7 @@
     fillGrid(calendarGrid, viewDate, deltaMap);
 
     monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
-    fitText(monthTotalEl, 22, 14);
+    fitText(monthTotalEl, 22, 12);
   }
 
   // ---- Grid fill ----
@@ -261,7 +261,7 @@
       if (typeof d === "number") {
         if (d < 0) exp.classList.add("neg");
         exp.textContent = formatSignedInt(d);
-        fitText(exp, 16, 6); // 収まるまで縮小
+        fitText(exp, 16, 4); // 収まるまで縮小（さらに下限を下げて途切れ防止）
       } else {
         exp.style.visibility = "hidden";
         exp.textContent = "0";
