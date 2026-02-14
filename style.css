@@ -81,7 +81,10 @@ body{
 .dow{
   display:grid;
   grid-template-columns: repeat(7,minmax(0,1fr));
-  padding: 12px 14px 8px;
+
+  /* 左右余白を削って列幅を稼ぐ（端末の安全領域は最低限だけ確保） */
+  padding: 12px max(6px, env(safe-area-inset-left)) 8px;
+
   color: var(--muted);
   font-size: 14px;
 }
