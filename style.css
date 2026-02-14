@@ -199,7 +199,8 @@ body{
   user-select: none;
 }
 
-.day.out{ opacity: .18; }
+/* ★ここが変更点：当月外(前月/翌月)は「数字を出さず空白」にする（UIを画像2に戻す） */
+.day.out{ opacity: 0; pointer-events: none; }
 
 /* 選択日：塗り */
 .day.selected{
@@ -228,7 +229,7 @@ body{
 /* 今日の日付数字：オレンジ */
 .day.today .dnum{ color: var(--orange); }
 
-/* 「日付を赤」は廃止（曜日の“日”だけ赤） */
+/* 「日付を赤」は廃止（曜日の"日"だけ赤） */
 .day.sun .dnum{ color: var(--text); }
 
 /* ランク（増加量と同じ色） */
