@@ -29,6 +29,10 @@ body{
   background: var(--bg);
   color: var(--text);
   touch-action: manipulation;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
 }
 
 /* Top bar */
@@ -83,6 +87,8 @@ body{
   display: flex;
   flex-direction: column;
   gap: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 
@@ -218,6 +224,7 @@ body{
 /* 下のスペースで直接入力（モーダル無し） */
 .entry-inline{
   padding: 10px 14px 92px; /* 1画面内に収めつつ合計ピルに隠れない */
+  flex: 0 0 auto;
 }
 
 .entry-row{
@@ -408,10 +415,6 @@ body{
   border:none;
   border-radius: 14px;
   padding: 10px 12px;
-  background: rgba(0,0,0,.82);
-  color: #fff;
-}
-.toast::backdrop{background: transparent} padding: 10px 12px;
   background: rgba(0,0,0,.82);
   color: #fff;
 }
