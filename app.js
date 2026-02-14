@@ -162,16 +162,19 @@ for (const row of rows) {
     if(!targetRank){
       targetLabelEl.textContent = "目標 --";
       targetNeedEl.textContent = "必要EXP --";
+      requestAnimationFrame(syncTopLeftFont);
       return;
     }
     targetLabelEl.textContent = `目標 ${targetRank}`;
     const targetCum = getCumXPByRank(targetRank);
     if(targetCum == null || !Number.isFinite(currentCumXP)){
       targetNeedEl.textContent = "必要EXP --";
+      requestAnimationFrame(syncTopLeftFont);
       return;
     }
     const need = Math.max(0, targetCum - currentCumXP);
     targetNeedEl.textContent = `必要EXP ${formatComma(need)}`;
+    requestAnimationFrame(syncTopLeftFont);
   }
 
   function promptTargetRank(){
@@ -399,6 +402,7 @@ const entryDialog = document.getElementById("entryDialog");
     // newGridがDOMに入って幅が確定してから縮小
     applyFits(newGrid);
     syncHeaderFont();
+    syncTopLeftFont();
 });
 
   const cleanup = () => {
@@ -424,6 +428,7 @@ function renderNoAnim() {
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
     syncHeaderFont();
+    syncTopLeftFont();
 });
 }
 
@@ -505,7 +510,7 @@ targetGrid.appendChild(cell);
     const deltaMap = buildDeltaMap(cum);
     monthTotalEl.textContent = `獲得EXP ${formatInt(sumMonthDelta(viewDate, deltaMap))}`;
     if (cumTotalEl) cumTotalEl.textContent = `累計EXP ${formatInt(getLatestCumulativeValue(cum))}`;
-    requestAnimationFrame(syncHeaderFont);
+    requestAnimationFrame(() => { syncHeaderFont(); syncTopLeftFont(); });
 }
 
 
@@ -632,7 +637,7 @@ function syncHeaderFont(){
   const min  = 10;
 
   // monthTotalEl を基準に計算（幅は同じレイアウトなので、同じサイズを適用）
-  const best = calcFitFont(monthTotalEl, base, min, "獲得EXP 9,999,999,999");
+  const best = calcFitFont(monthTotalEl, base, min, "獲得EXP 99,999,999,999,999");
 
   monthTotalEl.style.transform = "";
   monthTotalEl.style.transformOrigin = "center";
@@ -643,6 +648,36 @@ function syncHeaderFont(){
     cumTotalEl.style.transformOrigin = "center";
     cumTotalEl.style.fontSize = best + "px";
   }
+}
+
+
+function syncTopLeftFont(){
+  if(!targetLabelEl || !targetNeedEl) return;
+
+  // 左上は「領域固定 + フォント縮小」で被り防止
+  const baseLabel = 14;
+  const baseNeed  = 12;
+  const minPx = 9;
+
+  // テンプレは最大想定で計測（かなり大きい数でも収める）
+  const bestLabel = calcFitFont(targetLabelEl, baseLabel, minPx, "目標 99999");
+  const bestNeed  = calcFitFont(targetNeedEl,  baseNeed,  minPx, "必要EXP 99,999,999,999,999");
+
+  targetLabelEl.style.fontSize = bestLabel + "px";
+  targetNeedEl.style.fontSize  = bestNeed  + "px";
+
+  // まだ溢れる場合はscaleXで押し込む（ellipsisより優先）
+  [targetLabelEl, targetNeedEl].forEach(el=>{
+    el.style.transform = "";
+    el.style.transformOrigin = "left center";
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+    if (el.scrollWidth > el.clientWidth) {
+      const ratio = el.clientWidth / el.scrollWidth;
+      const scale = Math.max(0.72, Math.min(1, ratio));
+      el.style.transform = `scaleX(${scale})`;
+    }
+  });
 }
 
 // ---- Fit text (shrink font; keep columns fixed) ----
