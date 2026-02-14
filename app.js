@@ -424,12 +424,74 @@ if (typeof d === "number") {
 // ---- Fit text (shrink font; keep columns fixed) ----
 function applyFits(scopeEl){
   const list = scopeEl.querySelectorAll('.exp[data-fit="1"]');
+  if (!list.length) return;
+
+  // 仕様：各日付の表示は「+XXX,XXX,XXX」が枠内いっぱいになるフォントサイズを基準にし、
+  //      すべてのセルで同じフォントサイズに固定する（列幅は固定のまま）
+  const sample = list[0];
+
+  const basePx = Number(sample.dataset.fitBase || 16);
+  const minPx  = Number(sample.dataset.fitMin || 10);
+  const tpl    = (sample.dataset.fitTemplate || "").trim();
+
+  if (tpl) {
+    const best = calcFitFont(sample, basePx, minPx, tpl);
+
+    // CSS変数にも載せておく（デバッグ＆保険）
+    scopeEl.style.setProperty("--expFontPx", best + "px");
+
+    list.forEach(el => {
+      el.style.transform = "";
+      el.style.transformOrigin = "center";
+      el.style.fontSize = best + "px";
+
+      // eslint-disable-next-line no-unused-expressions
+      el.offsetWidth;
+
+      // 実値がテンプレより長い等で溢れた場合だけ、scaleXで押し込む
+      if (el.scrollWidth > el.clientWidth) {
+        const ratio = el.clientWidth / el.scrollWidth;
+        const scale = Math.max(0.72, Math.min(1, ratio));
+        el.style.transform = `scaleX(${scale})`;
+      }
+    });
+    return;
+  }
+
+  // テンプレが無い場合は従来どおり個別にfit
   list.forEach(el => {
-    const basePx = Number(el.dataset.fitBase || 16);
-    const minPx  = Number(el.dataset.fitMin || 10);
-    const tpl    = (el.dataset.fitTemplate || "").trim();
-    fitText(el, basePx, minPx, tpl || null);
+    const base = Number(el.dataset.fitBase || 16);
+    const min  = Number(el.dataset.fitMin || 10);
+    const template = (el.dataset.fitTemplate || "").trim();
+    fitText(el, base, min, template || null);
   });
+}
+
+function calcFitFont(el, basePx, minPx, templateStr){
+  const cs = getComputedStyle(el);
+  const family = cs.fontFamily || "system-ui";
+  const weight = cs.fontWeight || "900";
+
+  const canvas = calcFitFont._c || (calcFitFont._c = document.createElement("canvas"));
+  const ctx = canvas.getContext("2d");
+
+  const measure = (s, size) => {
+    ctx.font = `${weight} ${size}px ${family}`;
+    return ctx.measureText(s).width;
+  };
+
+  // iOS Safariで計測がズレるのを避ける（強制レイアウト）
+  // eslint-disable-next-line no-unused-expressions
+  el.offsetWidth;
+
+  let low = minPx, high = basePx, best = minPx;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const w = measure(templateStr, mid);
+    if (w <= el.clientWidth) { best = mid; low = mid + 1; }
+    else { high = mid - 1; }
+  }
+  return best;
 }
 
 function fitText(el, basePx, minPx, templateStr){
