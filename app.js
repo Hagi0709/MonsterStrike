@@ -2,7 +2,6 @@
 (() => {
   const STORAGE_KEY = "monst_cumxp_v2";
 
-
   /** @type {Record<string, number>} 累計経験値 */
   let cum = load();
 
@@ -18,11 +17,11 @@
   const monthTotalEl = document.getElementById("monthTotal");
 
   const menuBtn = document.getElementById("menuBtn");
-  const selectedDateEl = document.getElementById("selectedDate");
-  const cumInput = document.getElementById("cumInput");
-  const previewEl = document.getElementById("preview");
-  const saveBtn = document.getElementById("saveBtn");
-  const deleteBtn = document.getElementById("deleteBtn");
+  // Inline entry (no FAB / no modal)
+  const inlineSelectedDateEl = document.getElementById("inlineSelectedDate");
+  const inlineCumInput = document.getElementById("inlineCumInput");
+  const inlineSaveBtn = document.getElementById("inlineSaveBtn");
+  const inlineDeleteBtn = document.getElementById("inlineDeleteBtn");
 
   const menuDialog = document.getElementById("menuDialog");
   const prevBtn = document.getElementById("prevBtn");
@@ -44,21 +43,20 @@
   const now = new Date();
   viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
   renderNoAnim();
-  syncInline();
 
   // --- Swipe month change (with animation) ---
   let touchX = null;
   let touchY = null;
 
   gridWrap.addEventListener("touchstart", (e) => {
-    if (entryDialog.open || menuDialog.open) return;
+    if (menuDialog.open) return;
     const t = e.changedTouches[0];
     touchX = t.clientX;
     touchY = t.clientY;
   }, { passive: true });
 
   gridWrap.addEventListener("touchend", (e) => {
-    if (entryDialog.open || menuDialog.open) return;
+    if (menuDialog.open) return;
     if (touchX == null || touchY == null) return;
 
     const t = e.changedTouches[0];
@@ -85,41 +83,59 @@
     viewDate = new Date(t.getFullYear(), t.getMonth(), 1);
     selected = toYMD(t);
     renderNoAnim();
-    syncInline();
     menuDialog.close();
   });
-  // 仕様変更：日付を選択 → 下の入力欄で直接入力（FABなし）
-  saveBtn.addEventListener("click", () => {
-    const n = normalizeNumber(cumInput.value);
+
+  // Inline entry (no FAB / no modal)
+  function syncInline() {
+    inlineSelectedDateEl.textContent = selected;
+    inlineCumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
+  }
+
+  inlineSaveBtn.addEventListener("click", () => {
+    const n = normalizeNumber(inlineCumInput.value);
     if (n === null) { showToast("数字だけ（例: 123456789）"); return; }
+
     if (n === 0) {
-      delete cum[selected];
-      persist();
-      showToast("削除しました");
+      if (cum[selected] != null) {
+        delete cum[selected];
+        persist();
+        showToast("削除しました");
+      } else {
+        showToast("この日は記録なし");
+      }
       renderNoAnim();
+      syncInline();
       return;
     }
+
     cum[selected] = n;
     persist();
     showToast("保存しました");
     renderNoAnim();
+    syncInline();
   });
 
-  deleteBtn.addEventListener("click", () => {
+  inlineDeleteBtn.addEventListener("click", () => {
     if (cum[selected] == null) { showToast("この日は記録なし"); return; }
     delete cum[selected];
     persist();
     showToast("削除しました");
     renderNoAnim();
+    syncInline();
   });
 
   // 入力しながら3桁カンマ
-  cumInput.addEventListener("input", () => {
-    formatNumberInput(cumInput);
-    updatePreview();
+  inlineCumInput.addEventListener("input", () => {
+    const raw = inlineCumInput.value;
+    const n = normalizeNumber(raw);
+    if (n === null) return;
+    const before = inlineCumInput.selectionStart;
+    inlineCumInput.value = formatInt(n);
+    // おおざっぱに末尾維持（iOS向け）
+    try { inlineCumInput.setSelectionRange(before, before); } catch {}
   });
-
-  exportBtn.addEventListener("click", () => {
+exportBtn.addEventListener("click", () => {
     const payload = {
       app: "monst-exp-calendar",
       version: 5,
@@ -231,6 +247,8 @@ function renderNoAnim() {
 
   monthTotalEl.textContent = formatInt(sumMonthDelta(viewDate, deltaMap));
 
+  syncInline();
+
   // DOM上で幅が確定してから縮小
   requestAnimationFrame(() => {
     applyFits(calendarGrid);
@@ -263,13 +281,13 @@ function renderNoAnim() {
 
 if (typeof d === "number") {
   if (d < 0) exp.classList.add("neg");
-  exp.textContent = formatSignedInt(d);
+  exp.textContent = formatInt(Math.abs(d));
 
   // ※ newGrid（アニメ用）はDOMに入る前だと幅が取れず縮小に失敗するので、
   //    ここではフラグだけ付けて、DOM挿入後にまとめてfitTextする
   exp.dataset.fit = "1";
   exp.dataset.fitBase = "18";
-  exp.dataset.fitTemplate = "+XXX,XXX,XXX";
+  exp.dataset.fitTemplate = "XXX,XXX,XXX";
   exp.dataset.fitMin = "10";
 } else {
   exp.style.visibility = "hidden";
@@ -278,11 +296,7 @@ if (typeof d === "number") {
       cell.appendChild(exp);
 
       cell.addEventListener("click", () => {
-        const dt = ymdToDate(c.ymd);
-        if (dt.getMonth() !== viewDate.getMonth() || dt.getFullYear() !== viewDate.getFullYear()) {
-          viewDate = new Date(dt.getFullYear(), dt.getMonth(), 1);
-        }
-        openEntry(c.ymd);
+        selected = c.ymd;
         renderNoAnim();
       });
 
@@ -290,38 +304,7 @@ if (typeof d === "number") {
     }
   }
 
-  // ---- Entry ----
-  function syncInline(){
-    selectedDateEl.textContent = selected;
-    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
-    updatePreview();
-  }
-
-  function openEntry(ymd) {
-    // 直接入力：選択日を下の入力欄に反映するだけ
-    selected = ymd;
-    selectedDateEl.textContent = selected;
-    cumInput.value = cum[selected] != null ? formatInt(cum[selected]) : "";
-    updatePreview();
-    focusInlineInput();
-  }
-
-  function updatePreview() {
-    const n = normalizeNumber(cumInput.value);
-    if (n === null) { previewEl.textContent = "--"; return; }
-    if (n === 0) { previewEl.textContent = "削除"; return; }
-
-    const prev = findPrevCumulative(selected, cum);
-    if (!prev) { previewEl.textContent = "前回記録なし（増加量は表示されません）"; return; }
-
-    const diff = n - prev.value;
-    const sign = diff >= 0 ? "+" : "−";
-    const cls = diff >= 0 ? "plus" : "neg";
-    previewEl.innerHTML = `前回(${prev.date})との差：<span class="${cls}">${sign}${formatInt(Math.abs(diff))}</span>`;
-  }
-
-  // ---- Data to delta ----
-  function buildDeltaMap(cumulative) {
+function buildDeltaMap(cumulative) {
     const keys = Object.keys(cumulative).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
     keys.sort();
 
@@ -525,11 +508,7 @@ function fitText(el, basePx, minPx, templateStr){
     const d = pad2(date.getDate());
     return `${y}-${m}-${d}`;
   }
-  function pad2\(n\)\{ return String\(n\)\.padStart\(2, "0"\); \}
-
-  function focusInlineInput(){
-    try { cumInput && cumInput.focus(); } catch {}
-  }
+  function pad2(n){ return String(n).padStart(2, "0"); }
 
   function addMonths(date, delta) {
     const y = date.getFullYear();
